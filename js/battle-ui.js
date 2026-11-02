@@ -192,6 +192,22 @@ const BattleUI = (() => {
     });
   }
 
+  function startWorld(tid, kind, mode) {
+    const t = TERR[tid];
+    const seed = randomSeed();
+    const army = myArmy();
+    const enemy = worldDefender(tid, armyPower(army), kind);
+    showPrep({
+      title: `🌍 ${kind === 'uprising' ? `Aufstand: ${esc(t.name)}` : `Angriff auf ${esc(t.name)}`} · ${BATTLE_MODES[mode].icon} ${BATTLE_MODES[mode].name}`,
+      seed, mode, army, myTeam: 0, enemy, enemyVisible: true,
+      actions: `<button class="btn" id="pr-back">← Weltkarte</button><button class="btn primary big" id="pr-go">⚔️ Angriff!</button>`,
+      bind: () => {
+        $('#pr-back').onclick = () => switchTab('world');
+        $('#pr-go').onclick = () => startFight({ seed, armies: [deployView.army, enemy], myTeam: 0, opp: 'ai', mode, world: { tid, kind } });
+      },
+    });
+  }
+
   function showPrep(o) {
     cleanup();
     show('prep');
@@ -228,14 +244,14 @@ const BattleUI = (() => {
   }
 
   /* ---------- Kampf ---------- */
-  function startFight({ seed, armies, myTeam, opp, mode, practice }) {
+  function startFight({ seed, armies, myTeam, opp, mode, practice, world }) {
     cleanup();
     closeModal();
     armies = armies.map((a) => sanitizeArmy(JSON.parse(JSON.stringify(a))));
     const cfg = BATTLE_MODES[mode];
     let control = ['auto', 'auto'];
     if (cfg.command) control = opp === 'live' ? ['player', 'player'] : myTeam === 0 ? ['player', 'ai'] : ['ai', 'player'];
-    ctx = { mode, seed, myTeam, armies, opp, cfg, practice: practice || null };
+    ctx = { mode, seed, myTeam, armies, opp, cfg, practice: practice || null, world: world || null };
     show('fight');
     const battle = new Battle(seed, armies, { mode, control });
     ctx.battle = battle;
@@ -442,7 +458,12 @@ const BattleUI = (() => {
     const outcome = sum.winner === -1 ? 'draw' : sum.winner === me ? 'win' : 'lose';
     let reward = 0;
     const stage = stageOf(ctx.mode);
-    if (ctx.opp === 'ai' && ctx.practice) {
+    let worldRes = null;
+    if (ctx.world) {
+      worldRes = resolveWorldBattle(ctx.world.tid, ctx.world.kind, outcome);
+      reward = worldRes.reward;
+      if (outcome === 'win') S.stats.wins++; else if (outcome === 'lose') S.stats.losses++; else S.stats.draws++;
+    } else if (ctx.opp === 'ai' && ctx.practice) {
       const d = PRACTICE[ctx.practice];
       reward = outcome === 'win' ? d.win : outcome === 'draw' ? Math.round(d.win / 2) : 15;
       if (outcome === 'win') S.stats.wins++; else if (outcome === 'lose') S.stats.losses++; else S.stats.draws++;
@@ -453,7 +474,7 @@ const BattleUI = (() => {
       reward = outcome === 'win' ? 120 : outcome === 'draw' ? 70 : 50;
       if (outcome === 'win') S.stats.pvpWins++; else if (outcome === 'lose') S.stats.pvpLosses++; else S.stats.draws++;
     }
-    reward = Math.round(reward * cfg.reward);
+    if (!ctx.world) reward = Math.round(reward * cfg.reward);
     if (/aufgegeben/.test(sum.reason) && outcome === 'lose') reward = 0;
     if (ctx.opp === 'code') {
       S.codeFights = S.codeFights || {};
@@ -482,13 +503,15 @@ const BattleUI = (() => {
     }
     addVotes(reward);
     saveState();
-    const xp = surrendered ? 0 : Math.round((outcome === 'win' ? 40 : 15) * cfg.reward);
+    const xp = surrendered ? 0 : Math.round((outcome === 'win' ? 40 : 15) * cfg.reward) + (worldRes ? worldRes.xp : 0);
     const mvp = sum.bats.reduce((a, b) => (b.dmg + b.heal > a.dmg + a.heal ? b : a), sum.bats[0]);
     const rows = (t) => sum.bats.filter((b) => b.team === t).map((b) => `<tr>
         <td>${b === mvp ? '⭐ ' : ''}${CLASSES[b.cls].icon} ${esc(b.name)}</td><td class="n">${fmt(b.dmg)}</td><td class="n">${b.kills}</td><td class="n">${fmt(b.heal)}</td>
         <td>${b.alive ? (b.leaderGone ? '🏳️ zurückgetreten' : '✅ im Amt') : '💀 aufgerieben'}</td></tr>`).join('');
     const title = { win: '🏆 Wahlsieg!', lose: '📉 Niederlage', draw: '🤝 Große Koalition' }[outcome];
-    const actions = ctx.opp === 'ai'
+    const actions = ctx.world
+      ? `<button class="btn primary" id="rs-world">🌍 Zur Weltkarte</button>`
+      : ctx.opp === 'ai'
       ? `<button class="btn" id="rs-menu">Zum Menü</button><button class="btn primary" id="rs-next">${ctx.practice ? 'Neues Übungsgefecht' : outcome === 'win' ? `Weiter zu Stufe ${stageOf(ctx.mode)}` : 'Nochmal versuchen'}</button>`
       : ctx.opp === 'live'
         ? `<button class="btn" id="rs-leave">Raum verlassen</button><button class="btn primary" id="rs-rematch">🔁 Revanche</button>`
@@ -498,11 +521,13 @@ const BattleUI = (() => {
       <div class="result-sub">${cfg.icon} ${cfg.name} · ${esc(sum.reason)} · ${fmtTime(sum.time)} · Wertung ${sum.scores[0].toFixed(0)} : ${sum.scores[1].toFixed(0)}</div>
       ${[0, 1].map((t) => `<h3 style="color:${TEAM_COLORS[t].light}">${esc(ctx.armies[t].name)}${t === me ? ' (Du)' : ''}</h3>
         <table class="result-table"><tr><th>Bataillon</th><th>Schaden</th><th>Besiegt</th><th>Heilung</th><th>Status</th></tr>${rows(t)}</table>`).join('')}
+      ${worldRes ? `<div class="world-news">${worldRes.lines.map((l) => `<p>${esc(l)}</p>`).join('')}</div>` : ''}
       <div class="reward">${reward ? `+${reward} 🗳️ Stimmen${firstWin ? ` <small>(inkl. ${firstWin} für den ersten Sieg des Tages)</small>` : ''}` : ctx.opp === 'code' ? 'Keine Belohnung (Code-Paarung bereits gewertet)' : 'Keine Belohnung'}${xp ? `<div class="help">+${xp} Erfahrung</div>` : ''}</div>
       <div class="row" style="justify-content:center">${actions}</div>`);
     if (xp) gainXp(xp);
     const go = (fn) => () => { closeModal(); fn(); };
     if ($('#rs-menu')) $('#rs-menu').onclick = go(showMenu);
+    if ($('#rs-world')) $('#rs-world').onclick = go(() => switchTab('world'));
     if ($('#rs-next')) $('#rs-next').onclick = go(() => startAI(ctx.practice));
     if ($('#rs-leave')) $('#rs-leave').onclick = go(() => { Net.close(); live.phase = 'idle'; showMenu(); });
     if ($('#rs-rematch')) $('#rs-rematch').onclick = go(() => {
@@ -720,5 +745,5 @@ const BattleUI = (() => {
   /* für Tests */
   const _debug = { get ctx() { return ctx; }, get view() { return battleView; }, onNetMessage, get lockstep() { return lockstep; } };
 
-  return { showMenu, autoJoin, _debug };
+  return { showMenu, autoJoin, startWorld, _debug };
 })();

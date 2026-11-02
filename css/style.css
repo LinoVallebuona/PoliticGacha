@@ -354,3 +354,38 @@ kbd { background: #0008; border: 1px solid var(--line); border-radius: 4px; padd
   .profile-stats { grid-template-columns: repeat(2, 1fr); }
 }
 .pack-party { background: linear-gradient(160deg, #9f1239, #3b0a1c); }
+
+/* ---------- Weltkarte ---------- */
+.world-top { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.conts { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 6px; }
+.cont { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.cont .pbar { width: 90px; margin: 0; }
+.tribute { min-width: 220px; display: flex; flex-direction: column; gap: 6px; }
+.world-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: start; }
+.world-map { background: #0b1830; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.world-map svg { display: block; width: 100%; height: auto; }
+.world-map .ocean { fill: url(#none); fill: #0d2240; }
+.world-map .land { fill: #2b3b2a; stroke: #3d5238; stroke-width: 1.5; }
+.world-map .edge { stroke: #ffffff30; stroke-width: 1.5; }
+.world-map .edge.sea { stroke-dasharray: 4 4; }
+.world-map .edge.own { stroke: #60a5fa; stroke-width: 2.5; }
+.terr { cursor: pointer; }
+.terr .dot { fill: #1f2937; stroke: var(--rc); stroke-width: 2; }
+.terr .halo { fill: transparent; stroke: transparent; stroke-width: 2; }
+.terr .ico { font-size: 11px; text-anchor: middle; pointer-events: none; }
+.terr .lbl.small { font-size: 7.5px; }
+.terr .lbl { font-size: 9px; fill: #cbd5e1; text-anchor: middle; paint-order: stroke; stroke: #0008; stroke-width: 3px; pointer-events: none; }
+.terr.owned .dot { fill: #1d4ed8; stroke: #93c5fd; }
+.terr.target .halo { stroke: #fde047; stroke-dasharray: 4 3; animation: spin 6s linear infinite; }
+.terr.start .halo { stroke: #fde047; }
+.terr.uprising .dot { fill: #7f1d1d; stroke: #fca5a5; }
+.terr.uprising .halo { stroke: #ef4444; animation: pulsehalo 1s infinite; }
+.terr.locked { opacity: .55; }
+.terr.sel .halo { stroke: #fff; stroke-width: 3; stroke-dasharray: none; }
+.terr:hover .dot { stroke-width: 3.5; }
+@keyframes spin { to { stroke-dashoffset: -28; } }
+@keyframes pulsehalo { 50% { stroke-opacity: .2; } }
+.world-side .mini-row { flex-wrap: wrap; }
+.world-news { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; margin: 10px 0; }
+.world-news p { margin: 6px 0; }
+@media (max-width: 1000px) { .world-layout { grid-template-columns: 1fr; } }

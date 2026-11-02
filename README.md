@@ -27,7 +27,7 @@ Der Spielstand liegt im `localStorage` des Browsers.
   - gleiche Epoche → mehr Angriff
   - 4+ verschiedene Klassen → mehr Tempo und schnellere Fähigkeiten
   - 3+ gleiche Klasse → Doktrin-Bonus
-  - gleiche Parteienfamilie → Fraktionsdisziplin (schnellere Fähigkeiten)
+  - gleiche Parteienfamilie → **Fraktionsbonus**: ⚫ Stabilität (HP), 🔴 Solidarität (+Einheiten), 🟡 Freier Markt (Tempo), 🟢 Nachhaltigkeit (Regeneration), 🕊️ Widerstand (Angriff), 👑 Hofstaat (starke Anführer), 🌐 Diplomatie (Fähigkeiten); bei 5 zusätzlich „Absolute Mehrheit“
 - **Drei Schlachtmodi**:
   - ⚔️ **Gefecht**: klassische Auto-Schlacht um 3 Städte, bis 2:30.
   - 🗺️ **Feldzug**: große Karte mit Fluss und 3 Brücken, 5 befestigte Städte, Nachschublinien, Moral (bei 0 Kapitulation), Verstärkungswellen und politische Comebacks. Bis 7:00.
@@ -42,6 +42,14 @@ Der Spielstand liegt im `localStorage` des Browsers.
 | 💥 Artillerie | Sperrfeuer (Granatsalve) | 🛡️ 🪖 |
 | 🐎 Schnelle Brigade | Blitzangriff | 💥 🕊️ |
 | 🕊️ Diplomatie | Verhandlungen (Waffenstillstand + Heilung) | – |
+
+## 🌍 Weltkarte
+
+Wähle eine von 4 Heimaten (Mitteleuropa, Ägypten, Indien, USA) und erobere die Welt Gebiet für Gebiet: 33 Gebiete auf 4 Kontinenten, verbunden über Land und Seewege.
+- Verteidiger stammen aus dem jeweiligen Land bzw. der Region und werden mit jeder Eroberung stärker. 🏰 Festungen und 👑 Großmächte sind besonders hart (empfohlen: Feldzug).
+- Eroberte Gebiete zahlen **Tribut** (passiv, bis 12 h).
+- **Aufstände**: Etwa alle 3 Eroberungen rebelliert ein Grenzgebiet. Schlägst du den Aufstand nicht innerhalb von 3 Eroberungen nieder, geht das Gebiet verloren.
+- **Kontinent erobert**: +1000 Stimmen und ein garantierter epischer oder legendärer Politiker der Region. Weltherrschaft: +5000.
 
 ## Langzeit-Motivation & Stimmen verdienen
 
@@ -79,6 +87,7 @@ js/battle-view.js  Canvas-Renderer & Aufstellungs-Editor
 js/net.js          PeerJS-Anbindung
 js/ui.js           Packs, Sammlung, Allianzen
 js/earn.js         Wahlkampf: Diäten, Aufträge, Erfolge, Quiz, Ruhestand
+js/world.js        Weltkarte: Gebiete, Eroberung, Tribut, Aufstände
 js/battle-ui.js    Schlacht-Menü, Aufstellung, HUD, Ergebnis, Lobby
 js/main.js         Start
 ```

@@ -24,6 +24,7 @@ function switchTab(tab) {
   if (tab === 'battle') BattleUI.showMenu();
   if (tab === 'packs') updateHeader();
   if (tab === 'earn') renderEarn();
+  if (tab === 'world') renderWorld();
   window.scrollTo({ top: 0 });
 }
 
@@ -99,7 +100,8 @@ function showCardDetail(id) {
         <div class="ability-box">
           <b>${C.icon} ${C.name}</b> – ${C.count} Einheiten, Reichweite ${C.range}<br>
           <b>Fähigkeit „${C.ability}“:</b> ${C.abilityDesc}<br>
-          ${counters ? `<span class="muted">Stark gegen: ${counters}</span>` : '<span class="muted">Heilt Verbündete in der Nähe.</span>'}
+          ${counters ? `<span class="muted">Stark gegen: ${counters}</span>` : '<span class="muted">Heilt Verbündete in der Nähe.</span>'}<br>
+          <b>${PARTIES[p.party].icon} Fraktionsbonus „${PARTY_BONUS[p.party].name}“:</b> ${PARTY_BONUS[p.party].desc}, ab 2 Politikern der Familie ${esc(PARTIES[p.party].short)} in einer Allianz (stärker mit 3/4/5).
         </div>
         <p class="extract" id="wiki-extract">Lade Wikipedia-Eintrag …</p>
         <p class="muted"><a id="wiki-link" href="https://de.wikipedia.org/wiki/${encodeURIComponent(p.wiki.replace(/ /g, '_'))}" target="_blank" rel="noopener">Auf Wikipedia lesen ↗</a></p>
@@ -271,7 +273,8 @@ function renderAllianceEditor() {
     </div>
     <div class="slots" id="al-slots">${slots.join('')}</div>
     <h3>Synergien</h3>
-    <div class="synergies">${syn.list.length ? syn.list.map((s) => `<div class="syn">${s.icon} ${esc(s.name)} (${s.count}) – <b>${s.text}</b></div>`).join('') : '<div class="syn none">Keine Synergien. Tipp: gleiche Region (+Rückhalt), gleiche Epoche (+Angriff), 4+ verschiedene Klassen (+Tempo), 3+ gleiche Klasse (Doktrin).</div>'}</div>
+    <details class="help" style="margin-bottom:8px"><summary>Fraktionsboni der Parteien</summary>${Object.entries(PARTY_BONUS).map(([k, b]) => `<div>${PARTIES[k].icon} <b>${esc(PARTIES[k].short)}</b> – ${b.name}: ${b.desc}</div>`).join('')}<div>5 aus einer Partei: <b>Absolute Mehrheit</b> (+5 % Angriff & Rückhalt)</div></details>
+    <div class="synergies">${syn.list.length ? syn.list.map((s) => `<div class="syn">${s.icon} ${esc(s.name)} (${s.count}) – <b>${s.text}</b></div>`).join('') : '<div class="syn none">Keine Synergien. Tipp: gleiche Region (+Rückhalt), gleiche Epoche (+Angriff), gleiche Partei (Fraktionsbonus), 4+ verschiedene Klassen (+Tempo), 3+ gleiche Klasse (Doktrin).</div>'}</div>
     <h3>Deine Politiker <small class="help">– Klicken zum Hinzufügen/Entfernen</small></h3>
     <div class="card-grid mini-grid" id="al-pool">${ownedList.map((p) => cardHTML(p.id, { mini: true, cls: al.members.includes(p.id) ? 'in-alliance' : '' })).join('')}</div>`;
   $('#al-name').onchange = (e) => { al.name = e.target.value.trim() || 'Allianz'; saveState(); renderAlliances(); };

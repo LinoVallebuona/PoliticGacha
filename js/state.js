@@ -179,7 +179,12 @@ function allianceToArmy(a) {
 function memberStrength(p, lvl, s) {
   const lv = 1 + LEVEL_BONUS * (lvl - 1);
   const a = (0.55 + p.atk / 100) * lv * s.atk, d = (0.55 + p.def / 100) * lv * s.hp;
-  return 100 * Math.sqrt(a * d) * (0.92 + 0.08 * s.spd) * (0.9 + p.tac / 500);
+  const C = CLASSES[p.cls];
+  const unitMul = 1 + (s.units || 0) / C.count * 0.4;
+  const leaderMul = 1 + ((s.leader || 1) - 1) * 0.18;
+  const regenMul = 1 + (s.regen || 0) * 2;
+  const cdMul = 1 + (1 - Math.max(0.4, s.cd)) * 0.5;
+  return 100 * Math.sqrt(a * d) * (0.92 + 0.08 * s.spd) * (0.9 + p.tac / 500) * unitMul * leaderMul * regenMul * cdMul;
 }
 function alliancePower(ids, levels) {
   const syn = computeSynergies(ids);
