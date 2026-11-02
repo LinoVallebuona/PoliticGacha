@@ -27,7 +27,12 @@ Der Spielstand liegt im `localStorage` des Browsers.
   - gleiche Epoche → mehr Angriff
   - 4+ verschiedene Klassen → mehr Tempo und schnellere Fähigkeiten
   - 3+ gleiche Klasse → Doktrin-Bonus
-- **Schlacht**: Jeder Politiker führt ein Bataillon. Die Truppen kämpfen um drei Städte und den gegnerischen Regierungssitz. Wälder geben Deckung, Hügel mehr Reichweite. Fällt der Anführer, *tritt er zurück*.
+- **Drei Schlachtmodi**:
+  - ⚔️ **Gefecht**: klassische Auto-Schlacht um 3 Städte, bis 2:30.
+  - 🗺️ **Feldzug**: große Karte mit Fluss und 3 Brücken, 5 befestigte Städte, Nachschublinien, Moral (bei 0 Kapitulation), Verstärkungswellen und politische Comebacks. Bis 7:00.
+  - 🎖️ **Kommando**: Du befehligst selbst. Bataillone wählst du per Klick oder mit 1–5 und schickst sie mit einem Klick auf die Karte los. **H** hält die Stellung, **F** lässt sie frei handeln, **Q** löst die Fähigkeit aus. Mit Einfluss setzt du politische Maßnahmen ein: 📢 Propaganda, 🛑 Sanktionen, 🚑 Feldlazarett, ✈️ Luftschlag, 🚚 Reservisten (Tasten Z–B).
+- **Kampagne** pro Modus: Die KI baut ihre Allianz passend zu deiner Stärke, sucht Synergien, stellt taktisch auf und wird mit jeder Stufe um 4 % stärker.
+- Jeder Politiker führt ein Bataillon. Wälder geben Deckung, Hügel mehr Reichweite. Fällt der Anführer, *tritt er zurück*.
 
 | Klasse | Fähigkeit | stark gegen |
 |---|---|---|
@@ -40,7 +45,9 @@ Der Spielstand liegt im `localStorage` des Browsers.
 ## Gegen Freunde spielen
 
 1. **Live (online)**: Einer erstellt unter *Schlacht → Live gegen Freunde* einen Raum und teilt den 5-stelligen Code oder den Einladungslink. Beide stellen verdeckt auf und schauen dieselbe Schlacht live. Die Verbindung läuft Peer-to-Peer über WebRTC ([PeerJS](https://peerjs.com), liegt in `js/vendor`). Nur der Verbindungsaufbau nutzt den öffentlichen PeerJS-Server.
-2. **Freundes-Code**: Ihr tauscht eure Allianz-Codes, zum Beispiel per Messenger, und fügt den Code des anderen ein. Die Simulation ist **deterministisch**, deshalb sehen beide exakt dieselbe Schlacht.
+2. **Freundes-Code** (Gefecht & Feldzug): Ihr tauscht eure Allianz-Codes, zum Beispiel per Messenger, und fügt den Code des anderen ein. Wählt ihr denselben Modus, sehen dank der **deterministischen** Simulation beide exakt dieselbe Schlacht.
+
+Im Kommando-Modus online laufen die Befehle beider Spieler per **Lockstep** synchron. Eine Prüfsumme erkennt, falls die Schlacht auf beiden Geräten auseinanderläuft.
 
 ## Technik
 

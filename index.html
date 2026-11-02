@@ -81,25 +81,28 @@
       <div id="battle-prep" class="hidden"></div>
       <div id="battle-fight" class="hidden">
         <div class="hud">
-          <div class="hud-team t0"><div class="hud-name" id="hud-n0"></div><div class="hud-score" id="hud-s0"></div></div>
+          <div class="hud-team t0"><div><div class="hud-name" id="hud-n0"></div><div class="morale hidden" id="hud-m0" title="Moral"><i></i><span></span></div></div><div class="hud-score" id="hud-s0"></div></div>
           <div class="hud-mid">
             <div class="hud-time" id="hud-time">0:00</div>
             <div class="hud-ctrl">
               <button data-speed="0" title="Pause">⏸</button>
               <button data-speed="1" class="active">1×</button>
               <button data-speed="2">2×</button>
-              <button data-speed="4">4×</button>
-              <button id="hud-skip" title="Direkt zum Ergebnis">⏭</button>
+              <button data-speed="3">3×</button>
             </div>
           </div>
-          <div class="hud-team t1"><div class="hud-name" id="hud-n1"></div><div class="hud-score" id="hud-s1"></div></div>
+          <div class="hud-team t1"><div><div class="hud-name" id="hud-n1"></div><div class="morale hidden" id="hud-m1" title="Moral"><i></i><span></span></div></div><div class="hud-score" id="hud-s1"></div></div>
         </div>
         <div class="fight-layout">
           <div class="bat-list" id="bat-list-0"></div>
-          <div class="canvas-wrap"><canvas id="battle-canvas"></canvas></div>
+          <div class="fight-center">
+            <div class="canvas-wrap"><canvas id="battle-canvas"></canvas><div class="stall hidden" id="stall">⏳ Warte auf Gegner …</div></div>
+            <div class="command-bar hidden" id="command-bar"></div>
+          </div>
           <div class="bat-list" id="bat-list-1"></div>
         </div>
         <div class="battle-log" id="battle-log"></div>
+        <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn small danger" id="hud-surrender">🏳️ Aufgeben</button></div>
       </div>
     </section>
   </main>

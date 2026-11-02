@@ -4,42 +4,61 @@ const TEAM_COLORS = [
   { main: '#ef4444', light: '#fca5a5', dark: '#7f1d1d', name: 'Rot' },
 ];
 
-function setupCanvas(canvas) {
+function setupCanvas(canvas, W, H) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = SIM_W * dpr;
-  canvas.height = SIM_H * dpr;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (canvas.parentElement) canvas.parentElement.style.aspectRatio = `${W} / ${H}`;
   return ctx;
 }
 
-function canvasToWorld(canvas, ev) {
+function canvasToWorld(canvas, ev, W, H) {
   const r = canvas.getBoundingClientRect();
   const t = ev.touches ? ev.touches[0] || ev.changedTouches[0] : ev;
-  return { x: ((t.clientX - r.left) / r.width) * SIM_W, y: ((t.clientY - r.top) / r.height) * SIM_H };
+  return { x: ((t.clientX - r.left) / r.width) * W, y: ((t.clientY - r.top) / r.height) * H };
 }
 
 function renderBackground(map) {
+  const { W, H } = map;
   const c = document.createElement('canvas');
-  c.width = SIM_W; c.height = SIM_H;
+  c.width = W; c.height = H;
   const g = c.getContext('2d');
   const rng = mulberry32(map.seed ^ 0x1234);
-  // Grasland
-  const grad = g.createLinearGradient(0, 0, SIM_W, SIM_H);
+  const grad = g.createLinearGradient(0, 0, W, H);
   grad.addColorStop(0, '#5d7a3a'); grad.addColorStop(0.5, '#6b8a43'); grad.addColorStop(1, '#58753a');
-  g.fillStyle = grad; g.fillRect(0, 0, SIM_W, SIM_H);
-  for (let i = 0; i < 1800; i++) {
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < (W * H) / 470; i++) {
     g.fillStyle = rng() < 0.5 ? 'rgba(255,255,220,0.05)' : 'rgba(0,30,0,0.07)';
     const s = 2 + rng() * 6;
-    g.fillRect(rng() * SIM_W, rng() * SIM_H, s, s * 0.6);
+    g.fillRect(rng() * W, rng() * H, s, s * 0.6);
   }
-  // Straßen von den Hauptquartieren zu den Städten
+  // Straßen
   g.strokeStyle = 'rgba(210,190,140,0.55)'; g.lineWidth = 9; g.lineCap = 'round';
-  for (const hq of HQ_POS) for (const p of map.points) {
+  for (const hq of map.hq) for (const p of map.points) {
+    if (Math.abs(p.x - hq.x) > W * 0.75) continue;
     g.beginPath(); g.moveTo(hq.x, hq.y);
-    g.quadraticCurveTo((hq.x + p.x) / 2, (hq.y + p.y) / 2 + (p.y - 350) * 0.15, p.x, p.y); g.stroke();
+    g.quadraticCurveTo((hq.x + p.x) / 2, (hq.y + p.y) / 2 + (p.y - H / 2) * 0.15, p.x, p.y); g.stroke();
   }
-  g.beginPath(); g.moveTo(600, 130); g.lineTo(600, 570); g.stroke();
+  const mids = map.points.filter((p) => Math.abs(p.x - W / 2) < 5).sort((a, b) => a.y - b.y);
+  if (mids.length > 1) { g.beginPath(); g.moveTo(mids[0].x, mids[0].y); g.lineTo(mids[mids.length - 1].x, mids[mids.length - 1].y); g.stroke(); }
+  // Fluss & Brücken
+  if (map.river) {
+    const R = map.river;
+    g.fillStyle = '#2f6f9f';
+    g.fillRect(R.x - R.half, 0, R.half * 2, H);
+    g.fillStyle = 'rgba(255,255,255,0.12)';
+    for (let i = 0; i < 160; i++) g.fillRect(R.x - R.half + rng() * R.half * 2, rng() * H, 6 + rng() * 10, 1.5);
+    g.strokeStyle = 'rgba(30,60,30,0.5)'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(R.x - R.half, 0); g.lineTo(R.x - R.half, H); g.moveTo(R.x + R.half, 0); g.lineTo(R.x + R.half, H); g.stroke();
+    for (const b of map.bridges) {
+      g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(b.x - R.half - 10, b.y - b.half + 4, R.half * 2 + 20, b.half * 2);
+      g.fillStyle = '#9c8a6a'; g.fillRect(b.x - R.half - 12, b.y - b.half, R.half * 2 + 24, b.half * 2);
+      g.strokeStyle = '#6b5a3e'; g.lineWidth = 2;
+      for (let k = -b.half + 6; k < b.half; k += 8) { g.beginPath(); g.moveTo(b.x - R.half - 12, b.y + k); g.lineTo(b.x + R.half + 12, b.y + k); g.stroke(); }
+    }
+  }
   // Hügel
   for (const h of map.hills) {
     for (let k = 4; k >= 1; k--) {
@@ -51,7 +70,7 @@ function renderBackground(map) {
   // Wälder
   for (const f of map.forests) {
     g.beginPath(); g.arc(f.x, f.y, f.r, 0, Math.PI * 2); g.fillStyle = 'rgba(30,60,25,0.45)'; g.fill();
-    const n = Math.floor(f.r * f.r / 90);
+    const n = Math.floor((f.r * f.r) / 90);
     for (let i = 0; i < n; i++) {
       const a = rng() * Math.PI * 2, d = Math.sqrt(rng()) * (f.r - 6);
       const x = f.x + Math.cos(a) * d, y = f.y + Math.sin(a) * d, r = 6 + rng() * 6;
@@ -65,6 +84,7 @@ function renderBackground(map) {
     for (let i = 0; i < 9; i++) {
       const x = p.x - 30 + rng() * 60, y = p.y - 30 + rng() * 60;
       if ((x - p.x) ** 2 + (y - p.y) ** 2 > 900) continue;
+      if (map.river && Math.abs(x - map.river.x) < map.river.half + 6) continue;
       g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(x - 5, y - 3, 12, 10);
       g.fillStyle = '#d6cbb3'; g.fillRect(x - 6, y - 5, 11, 9);
       g.fillStyle = '#9b3d2b'; g.fillRect(x - 7, y - 7, 13, 4);
@@ -73,7 +93,7 @@ function renderBackground(map) {
   return c;
 }
 
-function drawPoints(ctx, points, time) {
+function drawPoints(ctx, points, time, forts) {
   for (const p of points) {
     const owner = p.owner;
     ctx.save();
@@ -90,7 +110,13 @@ function drawPoints(ctx, points, time) {
       ctx.arc(p.x, p.y, 66, -Math.PI / 2, -Math.PI / 2 + (Math.abs(p.prog) / 100) * Math.PI * 2);
       ctx.strokeStyle = TEAM_COLORS[t].main; ctx.lineWidth = 5; ctx.stroke();
     }
-    // Fahne
+    if (forts) {
+      // Festungsturm
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(p.x - 26, p.y - 14, 14, 22);
+      ctx.fillStyle = owner >= 0 ? TEAM_COLORS[owner].dark : '#555';
+      ctx.fillRect(p.x - 28, p.y - 18, 14, 22);
+      ctx.fillRect(p.x - 30, p.y - 22, 4, 5); ctx.fillRect(p.x - 23, p.y - 22, 4, 5); ctx.fillRect(p.x - 16, p.y - 22, 4, 5);
+    }
     ctx.fillStyle = '#333'; ctx.fillRect(p.x - 1, p.y - 34, 2, 22);
     ctx.fillStyle = owner >= 0 ? TEAM_COLORS[owner].main : '#e5e7eb';
     ctx.beginPath(); ctx.moveTo(p.x + 1, p.y - 34); ctx.lineTo(p.x + 16, p.y - 29); ctx.lineTo(p.x + 1, p.y - 24); ctx.fill();
@@ -101,12 +127,11 @@ function drawPoints(ctx, points, time) {
   }
 }
 
-function drawHQ(ctx, team, hp, name) {
-  const { x, y } = HQ_POS[team];
+function drawHQ(ctx, map, team, hp, hqHp, name) {
+  const { x, y } = map.hq[team];
   const col = TEAM_COLORS[team];
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x - 30, y - 18, 64, 46);
-  // Regierungsgebäude mit Kuppel
   ctx.fillStyle = '#e8e2d0'; ctx.fillRect(x - 32, y - 20, 64, 44);
   ctx.fillStyle = col.main; ctx.fillRect(x - 32, y - 24, 64, 7);
   for (let i = -3; i <= 3; i++) { ctx.fillStyle = '#b9b09a'; ctx.fillRect(x + i * 8 - 2, y - 14, 4, 34); }
@@ -114,7 +139,7 @@ function drawHQ(ctx, team, hp, name) {
   ctx.fillStyle = '#333'; ctx.fillRect(x - 1, y - 52, 2, 16);
   ctx.fillStyle = col.main; ctx.fillRect(x + 1, y - 52, 14, 8);
   if (hp !== undefined) {
-    const f = Math.max(0, hp / HQ_HP);
+    const f = Math.max(0, hp / hqHp);
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x - 34, y + 30, 68, 7);
     ctx.fillStyle = f > 0.5 ? '#22c55e' : f > 0.25 ? '#eab308' : '#ef4444'; ctx.fillRect(x - 33, y + 31, 66 * f, 5);
   }
@@ -166,21 +191,29 @@ function drawUnitShape(ctx, u, col, dirX) {
 class BattleView {
   constructor(canvas, battle, opts = {}) {
     this.canvas = canvas;
-    this.ctx = setupCanvas(canvas);
     this.battle = battle;
+    this.W = battle.W; this.H = battle.H;
+    this.ctx = setupCanvas(canvas, this.W, this.H);
     battle.fxEnabled = true;
     this.myTeam = opts.myTeam ?? 0;
     this.speed = 1;
     this.bg = renderBackground(battle.map);
     this.decals = document.createElement('canvas');
-    this.decals.width = SIM_W; this.decals.height = SIM_H;
+    this.decals.width = this.W; this.decals.height = this.H;
     this.effects = [];
     this.prev = {};
     this.acc = 0;
     this.running = false;
     this.onTick = opts.onTick || (() => {});
     this.onEnd = opts.onEnd || (() => {});
+    this.gate = opts.gate || null;     // Lockstep: darf der nächste Schritt laufen?
+    this.onStall = opts.onStall || (() => {});
+    this.stallT = 0;
     this.endFired = false;
+    // Kommando-Interaktion
+    this.selected = -1;
+    this.aim = null;      // ausgewählte Maßnahme
+    this.mouse = null;
     battle.bats.forEach((b) => Wiki.image(b.pid));
   }
 
@@ -193,8 +226,13 @@ class BattleView {
       this.last = now;
       if (!this.paused) {
         this.acc += dt * this.speed;
-        let n = 0;
-        while (this.acc >= SIM_DT && n < 40 && !this.battle.over) { this.battle.step(); this.acc -= SIM_DT; n++; }
+        let n = 0, stalled = false;
+        while (this.acc >= SIM_DT && n < 40 && !this.battle.over) {
+          if (this.gate && !this.gate(this.battle)) { stalled = true; break; }
+          this.battle.step(); this.acc -= SIM_DT; n++;
+        }
+        if (stalled) { this.acc = Math.min(this.acc, SIM_DT * 3); this.stallT += dt; } else this.stallT = 0;
+        this.onStall(this.stallT);
         if (this.battle.over) this.acc = 0;
       }
       this.consumeFx();
@@ -210,10 +248,15 @@ class BattleView {
   }
   stop() { this.running = false; }
 
-  skip() {
-    this.battle.fxEnabled = false;
-    this.battle.runToEnd();
-    this.battle.fxEnabled = true;
+  /* Bataillon des Spielers unter dem Mauszeiger */
+  batAt(x, y) {
+    let best = -1, bd = 22 * 22;
+    for (const u of this.battle.units) {
+      if (!u.alive || u.cls === 'hq' || u.team !== this.myTeam) continue;
+      const d = (u.x - x) ** 2 + (u.y - y) ** 2;
+      if (d < bd) { bd = d; best = u.bat; }
+    }
+    return best;
   }
 
   consumeFx() {
@@ -228,10 +271,10 @@ class BattleView {
         d.beginPath(); d.arc(e.x, e.y, e.r * 0.6, 0, Math.PI * 2); d.fill();
         this.effects.push({ ...e, life: 0.5, max: 0.5 });
       } else if (e.type === 'shot') {
-        this.effects.push({ ...e, life: e.cls === 'hq' ? 0.2 : 0.12, max: 0.12 });
+        this.effects.push({ ...e, life: e.cls === 'hq' || e.cls === 'fort' ? 0.2 : 0.12, max: 0.12 });
       } else if (e.type === 'heal') {
         this.effects.push({ ...e, life: 0.35, max: 0.35 });
-      } else if (e.type === 'ability') {
+      } else if (e.type === 'ability' || e.type === 'policy') {
         this.effects.push({ ...e, life: 1.4, max: 1.4 });
       } else if (e.type === 'text') {
         this.effects.push({ ...e, life: 1.6, max: 1.6 });
@@ -244,16 +287,39 @@ class BattleView {
     const ctx = this.ctx, B = this.battle;
     ctx.drawImage(this.bg, 0, 0);
     ctx.drawImage(this.decals, 0, 0);
-    drawPoints(ctx, B.points, B.time);
-    drawHQ(ctx, 0, B.hq[0].hp, B.armies[0].name);
-    drawHQ(ctx, 1, B.hq[1].hp, B.armies[1].name);
+    if (B.cfg.supply) {
+      // Nachschubgebiete der eigenen Städte
+      for (const p of B.points) {
+        if (p.owner < 0) continue;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 300, 0, Math.PI * 2);
+        ctx.strokeStyle = TEAM_COLORS[p.owner].main + '30'; ctx.lineWidth = 2; ctx.setLineDash([3, 9]); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+    drawPoints(ctx, B.points, B.time, B.cfg.forts);
+    drawHQ(ctx, B.map, 0, B.hq[0].hp, B.hqHp, B.armies[0].name);
+    drawHQ(ctx, B.map, 1, B.hq[1].hp, B.hqHp, B.armies[1].name);
 
-    // Fähigkeits-Auren
+    // Befehle des Spielers
     for (const bat of B.bats) {
-      if (bat.shieldT <= 0 && bat.blitzT <= 0) continue;
+      if (bat.team !== this.myTeam || !bat.order) continue;
+      const us = B.batUnits(bat);
+      if (!us.length) continue;
+      const c = B.centroid(us);
+      const sel = bat.idx === this.selected;
+      ctx.strokeStyle = sel ? 'rgba(253,224,71,0.9)' : 'rgba(255,255,255,0.35)'; ctx.lineWidth = sel ? 2 : 1.2;
+      if (!bat.order.arrived) { ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(bat.order.x, bat.order.y); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.fillStyle = sel ? '#fde047' : 'rgba(255,255,255,0.6)';
+      ctx.fillRect(bat.order.x - 1, bat.order.y - 16, 2, 16);
+      ctx.beginPath(); ctx.moveTo(bat.order.x + 1, bat.order.y - 16); ctx.lineTo(bat.order.x + 12, bat.order.y - 12); ctx.lineTo(bat.order.x + 1, bat.order.y - 8); ctx.fill();
+    }
+
+    // Auren
+    for (const bat of B.bats) {
+      const sel = bat.idx === this.selected && bat.team === this.myTeam;
+      if (bat.shieldT <= 0 && bat.blitzT <= 0 && !sel) continue;
       for (const u of B.batUnits(bat)) {
-        ctx.beginPath(); ctx.arc(u.x, u.y, u.r + 5, 0, Math.PI * 2);
-        ctx.strokeStyle = bat.shieldT > 0 ? 'rgba(125,211,252,0.9)' : 'rgba(253,224,71,0.9)';
+        ctx.beginPath(); ctx.arc(u.x, u.y, u.r + (sel ? 4 : 5), 0, Math.PI * 2);
+        ctx.strokeStyle = sel ? 'rgba(253,224,71,0.95)' : bat.shieldT > 0 ? 'rgba(125,211,252,0.9)' : 'rgba(253,224,71,0.9)';
         ctx.lineWidth = 2; ctx.stroke();
       }
     }
@@ -268,6 +334,10 @@ class BattleView {
       const col = TEAM_COLORS[u.team];
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
       ctx.beginPath(); ctx.ellipse(u.x + 2, u.y + 3, u.r, u.r * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+      if (u.weakT > 0 || u.slowT > 0) {
+        ctx.beginPath(); ctx.arc(u.x, u.y, u.r + 3, 0, Math.PI * 2);
+        ctx.fillStyle = u.weakT > 0 ? 'rgba(192,132,252,0.45)' : 'rgba(56,189,248,0.4)'; ctx.fill();
+      }
       if (u.leader) {
         const bat = B.bats[u.bat];
         drawPortraitDisc(ctx, u.x, u.y, u.r + 2, bat.pid, u.team);
@@ -275,9 +345,13 @@ class BattleView {
         ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(u.x - 14, u.y - u.r - 10, 28, 4);
         ctx.fillStyle = f > 0.5 ? '#22c55e' : f > 0.25 ? '#eab308' : '#ef4444';
         ctx.fillRect(u.x - 14, u.y - u.r - 10, 28 * f, 4);
+        const label = bat.name.split(' ').slice(-1)[0];
         ctx.font = '10px system-ui, sans-serif'; ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillText(bat.name.split(' ').slice(-1)[0], u.x + 1, u.y + u.r + 13);
-        ctx.fillStyle = '#fff'; ctx.fillText(bat.name.split(' ').slice(-1)[0], u.x, u.y + u.r + 12);
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillText(label, u.x + 1, u.y + u.r + 13);
+        ctx.fillStyle = '#fff'; ctx.fillText(label, u.x, u.y + u.r + 12);
+        if (bat.manual && bat.team === this.myTeam && !bat.leaderGone && bat.abilityLeft <= 0) {
+          ctx.font = '13px sans-serif'; ctx.fillText('⚡', u.x + u.r + 6, u.y - u.r - 2);
+        }
       } else {
         drawUnitShape(ctx, u, col, dirX);
         if (u.hp < u.maxHp * 0.99) {
@@ -289,6 +363,7 @@ class BattleView {
         ctx.fillStyle = '#fff'; ctx.fillRect(u.x + 4, u.y - u.r - 12, 1.5, 9);
         ctx.fillRect(u.x + 5.5, u.y - u.r - 12, 6, 4);
       }
+      if (u.unsup && u.leader) { ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('⚠️', u.x - u.r - 6, u.y - u.r - 2); }
     }
 
     // Granaten
@@ -300,6 +375,14 @@ class BattleView {
       ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = s.big ? '#fde047' : '#111'; ctx.beginPath(); ctx.arc(x, y - h, s.big ? 4 : 3, 0, Math.PI * 2); ctx.fill();
     }
+    // Angekündigte Luftschläge
+    for (const s of B.strikes) {
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 80);
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(239,68,68,${0.12 + 0.12 * pulse})`; ctx.fill();
+      ctx.strokeStyle = 'rgba(254,202,202,0.9)'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.font = '22px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✈️', s.x, s.y - s.r * (s.delay / 1.5) - 8);
+    }
 
     // Effekte
     for (const e of this.effects) {
@@ -310,8 +393,8 @@ class BattleView {
           ctx.strokeStyle = `rgba(255,255,255,${a})`; ctx.lineWidth = 2;
           ctx.beginPath(); ctx.moveTo(e.x2 - 5, e.y2 - 5); ctx.lineTo(e.x2 + 5, e.y2 + 5); ctx.stroke();
         } else if (e.cls !== 'art') {
-          ctx.strokeStyle = e.cls === 'hq' ? `rgba(255,240,150,${a})` : (e.team === 0 ? `rgba(191,219,254,${a})` : `rgba(254,202,202,${a})`);
-          ctx.lineWidth = e.cls === 'tank' || e.cls === 'hq' ? 2.5 : 1.2;
+          ctx.strokeStyle = e.cls === 'hq' || e.cls === 'fort' ? `rgba(255,240,150,${a})` : (e.team === 0 ? `rgba(191,219,254,${a})` : `rgba(254,202,202,${a})`);
+          ctx.lineWidth = e.cls === 'tank' || e.cls === 'hq' || e.cls === 'fort' ? 2.5 : 1.2;
           ctx.beginPath(); ctx.moveTo(e.x1, e.y1); ctx.lineTo(e.x2, e.y2); ctx.stroke();
           ctx.fillStyle = `rgba(255,220,120,${a})`; ctx.beginPath(); ctx.arc(e.x1, e.y1, 2.5, 0, Math.PI * 2); ctx.fill();
         } else {
@@ -327,23 +410,33 @@ class BattleView {
         ctx.strokeStyle = `rgba(255,255,255,${a * 0.6})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, r * 1.3, 0, Math.PI * 2); ctx.stroke();
       } else if (e.type === 'death') {
         ctx.fillStyle = `rgba(80,80,80,${a * 0.6})`; ctx.beginPath(); ctx.arc(e.x, e.y - (1 - a) * 10, 6 + (1 - a) * 8, 0, Math.PI * 2); ctx.fill();
-      } else if (e.type === 'ability') {
+      } else if (e.type === 'ability' || e.type === 'policy') {
         const col = TEAM_COLORS[e.team];
-        const r = 30 + (1 - a) * 140;
-        ctx.strokeStyle = col.light; ctx.globalAlpha = a; ctx.lineWidth = 3;
+        const label = e.type === 'ability' ? `${CLASSES[e.cls].icon} ${e.name}!` : `${POLICIES[e.key].icon} ${POLICIES[e.key].name}!`;
+        const r = e.type === 'policy' && e.r ? e.r * (0.6 + (1 - a) * 0.5) : 30 + (1 - a) * 140;
+        ctx.strokeStyle = e.type === 'policy' ? '#fde047' : col.light; ctx.globalAlpha = a; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.stroke();
         ctx.font = 'bold 15px system-ui, sans-serif'; ctx.textAlign = 'center';
-        ctx.fillStyle = '#000'; ctx.fillText(`${CLASSES[e.cls].icon} ${e.name}!`, e.x + 1, e.y - 30 - (1 - a) * 20 + 1);
-        ctx.fillStyle = '#fff'; ctx.fillText(`${CLASSES[e.cls].icon} ${e.name}!`, e.x, e.y - 30 - (1 - a) * 20);
+        ctx.fillStyle = '#000'; ctx.fillText(label, e.x + 1, e.y - 30 - (1 - a) * 20 + 1);
+        ctx.fillStyle = '#fff'; ctx.fillText(label, e.x, e.y - 30 - (1 - a) * 20);
         ctx.globalAlpha = 1;
       } else if (e.type === 'text') {
-        ctx.globalAlpha = a; ctx.font = 'bold 16px system-ui, sans-serif'; ctx.textAlign = 'center';
+        ctx.globalAlpha = a; ctx.font = 'bold 15px system-ui, sans-serif'; ctx.textAlign = 'center';
         ctx.fillStyle = '#000'; ctx.fillText(e.text, e.x + 1, e.y - (1 - a) * 30 + 1);
         ctx.fillStyle = '#fde047'; ctx.fillText(e.text, e.x, e.y - (1 - a) * 30);
         ctx.globalAlpha = 1;
       }
     }
     this.effects = this.effects.filter((e) => e.life > 0);
+
+    // Zielkreis für Maßnahmen
+    if (this.aim && this.mouse && POLICIES[this.aim].r) {
+      const P = POLICIES[this.aim];
+      ctx.beginPath(); ctx.arc(this.mouse.x, this.mouse.y, P.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(253,224,71,0.12)'; ctx.fill();
+      ctx.strokeStyle = '#fde047'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(P.icon, this.mouse.x, this.mouse.y + 7);
+    }
   }
 }
 
@@ -351,13 +444,14 @@ class BattleView {
 class DeployView {
   constructor(canvas, map, opts) {
     this.canvas = canvas;
-    this.ctx = setupCanvas(canvas);
     this.map = map;
+    this.ctx = setupCanvas(canvas, map.W, map.H);
     this.bg = renderBackground(map);
-    this.army = opts.army;           // eigene Armee (wird verändert)
+    this.army = opts.army;
     this.myTeam = opts.myTeam ?? 0;
-    this.enemy = opts.enemy || null; // optional sichtbar
+    this.enemy = opts.enemy || null;
     this.enemyName = opts.enemyName || '';
+    this.forts = !!opts.forts;
     this.onChange = opts.onChange || (() => {});
     this.drag = null;
     this.locked = false;
@@ -365,10 +459,10 @@ class DeployView {
     if (this.enemy) this.enemy.members.forEach((m) => Wiki.image(m.id));
     const down = (ev) => {
       if (this.locked) return;
-      const p = canvasToWorld(canvas, ev);
-      let best = null, bd = 30 * 30;
+      const p = canvasToWorld(canvas, ev, map.W, map.H);
+      let best = null, bd = 34 * 34;
       this.army.members.forEach((m) => {
-        const w = deployToWorld(this.myTeam, m.pos);
+        const w = deployToWorld(map, this.myTeam, m.pos);
         const d = (w.x - p.x) ** 2 + (w.y - p.y) ** 2;
         if (d < bd) { bd = d; best = m; }
       });
@@ -377,9 +471,9 @@ class DeployView {
     const move = (ev) => {
       if (!this.drag) return;
       ev.preventDefault();
-      const p = canvasToWorld(canvas, ev);
-      const x = this.myTeam === 0 ? p.x : SIM_W - p.x;
-      this.drag.pos = worldToDeploy(x, p.y).map((v) => Math.round(v * 1000) / 1000);
+      const p = canvasToWorld(canvas, ev, map.W, map.H);
+      const x = this.myTeam === 0 ? p.x : map.W - p.x;
+      this.drag.pos = worldToDeploy(map, x, p.y).map((v) => Math.round(v * 1000) / 1000);
     };
     const up = () => { if (this.drag) { this.drag = null; this.onChange(this.army); } };
     canvas.addEventListener('mousedown', down);
@@ -402,7 +496,7 @@ class DeployView {
     army.members.forEach((m) => {
       const p = POL_BY_ID[m.id];
       const C = CLASSES[p.cls];
-      const w = deployToWorld(team, m.pos);
+      const w = deployToWorld(this.map, team, m.pos);
       ctx.globalAlpha = faded ? 0.75 : 1;
       for (let i = 1; i < C.count; i++) {
         const ring = 1 + Math.floor((i - 1) / 6), k = (i - 1) % 6;
@@ -419,32 +513,31 @@ class DeployView {
   }
 
   draw(time) {
-    const ctx = this.ctx;
+    const ctx = this.ctx, map = this.map, z = map.zone;
     ctx.drawImage(this.bg, 0, 0);
-    drawPoints(ctx, this.map.points.map((p) => ({ ...p, owner: -1, prog: 0 })), time);
-    // Zonen
+    drawPoints(ctx, map.points.map((p) => ({ ...p, owner: -1, prog: 0 })), time, this.forts);
     for (const team of [0, 1]) {
-      const x0 = team === 0 ? DEPLOY_ZONE.x0 : SIM_W - DEPLOY_ZONE.x1;
+      const x0 = team === 0 ? z.x0 : map.W - z.x1;
       const isMine = team === this.myTeam;
       ctx.fillStyle = isMine ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.12)';
-      ctx.fillRect(x0 - 20, DEPLOY_ZONE.y0 - 30, DEPLOY_ZONE.x1 - DEPLOY_ZONE.x0 + 40, DEPLOY_ZONE.y1 - DEPLOY_ZONE.y0 + 60);
+      ctx.fillRect(x0 - 20, z.y0 - 30, z.x1 - z.x0 + 40, z.y1 - z.y0 + 60);
       ctx.setLineDash([8, 6]); ctx.lineDashOffset = -time * 12;
       ctx.strokeStyle = isMine ? TEAM_COLORS[team].light : 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2;
-      ctx.strokeRect(x0 - 20, DEPLOY_ZONE.y0 - 30, DEPLOY_ZONE.x1 - DEPLOY_ZONE.x0 + 40, DEPLOY_ZONE.y1 - DEPLOY_ZONE.y0 + 60);
+      ctx.strokeRect(x0 - 20, z.y0 - 30, z.x1 - z.x0 + 40, z.y1 - z.y0 + 60);
       ctx.setLineDash([]);
     }
-    drawHQ(ctx, 0); drawHQ(ctx, 1);
+    drawHQ(ctx, map, 0); drawHQ(ctx, map, 1);
+    const otherX = this.myTeam === 0 ? map.W - (z.x0 + z.x1) / 2 : (z.x0 + z.x1) / 2;
     if (this.enemy) this.drawArmy(ctx, this.enemy, 1 - this.myTeam, true);
     else {
-      const x = this.myTeam === 0 ? SIM_W - 190 : 190;
       ctx.font = 'bold 16px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      ctx.fillText(this.enemyName ? `${this.enemyName} stellt sich auf…` : 'Gegner verdeckt', x, 340);
+      ctx.fillText(this.enemyName ? `${this.enemyName} stellt sich auf…` : 'Gegner verdeckt', otherX, map.H / 2 - 10);
     }
     this.drawArmy(ctx, this.army, this.myTeam, false);
     if (!this.locked) {
-      const x = this.myTeam === 0 ? 190 : SIM_W - 190;
+      const x = this.myTeam === 0 ? (z.x0 + z.x1) / 2 : map.W - (z.x0 + z.x1) / 2;
       ctx.font = '13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.fillText('↕ Porträts ziehen, um Bataillone aufzustellen', x, 30);
+      ctx.fillText('↕ Porträts ziehen, um Bataillone aufzustellen', x, z.y0 - 38);
     }
   }
 }

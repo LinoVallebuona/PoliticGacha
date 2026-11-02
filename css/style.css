@@ -221,7 +221,8 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .battle-log { margin-top: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; height: 108px; overflow: hidden; font-size: 13px; display: flex; flex-direction: column-reverse; }
 .battle-log div { padding: 1px 0; color: #cfd5ee; }
 .battle-log .t0 { color: #93c5fd; } .battle-log .t1 { color: #fca5a5; }
-.battle-log .resign { font-weight: 700; }
+.battle-log .k-resign, .battle-log .k-policy, .battle-log .k-morale { font-weight: 700; }
+.battle-log .k-comeback, .battle-log .k-wave { font-style: italic; }
 .battle-log time { color: var(--muted); margin-right: 8px; font-variant-numeric: tabular-nums; }
 
 /* Ergebnis */
@@ -276,3 +277,39 @@ main { max-width: 1400px; margin: 0 auto; padding: 20px; }
   .hud-name { font-size: 14px; }
   .hud-ctrl { justify-content: center; }
 }
+
+/* ---------- Schlachtmodi & Kommando ---------- */
+.step-title { margin: 20px 0 10px; font-size: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.mode-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.mode-tile { text-align: left; background: var(--panel); border: 2px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 6px; transition: border-color .2s, transform .15s; }
+.mode-tile:hover { transform: translateY(-2px); border-color: #4b5590; }
+.mode-tile.sel { border-color: var(--gold); background: linear-gradient(160deg, #3a3110, var(--panel)); box-shadow: 0 0 20px #ffb80033; }
+.mode-tile .mode-icon { font-size: 34px; }
+.mode-tile b { font-size: 18px; }
+.mode-meta { font-size: 12px; color: var(--gold); margin-top: 4px; }
+.fight-center { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.stall { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #0008; font-size: 20px; font-weight: 800; }
+.morale { position: relative; height: 12px; width: 150px; background: #0008; border-radius: 6px; overflow: hidden; margin-top: 4px; }
+.morale i { display: block; height: 100%; background: var(--green); transition: width .3s; }
+.morale span { position: absolute; inset: 0; font-size: 9px; font-weight: 800; line-height: 12px; text-align: center; color: #fff; text-shadow: 0 1px 2px #000; }
+.hud-team.t1 .morale { margin-left: auto; }
+.command-bar { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.cp { min-width: 150px; }
+.cp-label { font-size: 13px; }
+.cp-label b { color: var(--gold); font-size: 16px; }
+.cp-bar { height: 8px; background: #0008; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+.cp-bar i { display: block; height: 100%; background: linear-gradient(90deg, #b8860b, #ffd36b); }
+.policies { display: flex; gap: 6px; flex-wrap: wrap; }
+.policy { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 4px 8px; min-width: 74px; }
+.policy .pi { font-size: 20px; }
+.policy .pn { font-size: 11px; font-weight: 700; }
+.policy .pc { font-size: 11px; color: var(--gold); }
+.policy .pcd { position: absolute; left: 0; right: 0; bottom: 0; background: #000a; pointer-events: none; }
+.policy.off { opacity: .5; }
+.policy.armed { border-color: #fde047; box-shadow: 0 0 12px #fde04788; }
+.sel-panel { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1; min-width: 240px; }
+.sel-name { font-size: 14px; margin-right: 4px; }
+.bat.clickable { cursor: pointer; }
+.bat.sel { border-color: #fde047; box-shadow: 0 0 10px #fde04755; }
+.bat.ready .cdbar i { background: #fde047; box-shadow: 0 0 6px #fde047; }
+kbd { background: #0008; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font-size: 10px; }
