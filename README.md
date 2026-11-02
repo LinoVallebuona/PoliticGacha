@@ -18,15 +18,16 @@ Der Spielstand liegt im `localStorage` des Browsers.
 
 ## Features
 
-- **92 Politiker** in 4 Seltenheiten (Gewöhnlich, Selten, Episch, Legendär), 4 Regionen, 5 Epochen und 5 Truppenklassen.
+- **117 Politiker** in 4 Seltenheiten (Gewöhnlich, Selten, Episch, Legendär), 4 Regionen, 5 Epochen, 7 Parteienfamilien und 5 Truppenklassen.
 - **Wikipedia-Anbindung**: Porträts und Kurzbiografien werden live aus der deutschen Wikipedia geladen (REST-API) und gecacht. Offline funktionieren die Karten trotzdem, dann mit Initialen.
-- **Packs**: Wahlkampf-, Koalitions-, Regional- und Epochen-Pack, dazu ein Pity-System (Legendär spätestens nach 60 Zügen) und ein täglicher Bonus.
+- **Packs**: Wahlkampf-, Koalitions-, Regional-, Epochen- und **Partei-Pack**, dazu ein Pity-System (Legendär spätestens nach 60 Zügen).
 - **Duplikate** steigern das Level (bis Level 5, je +8 % Werte). Bei Max-Level gibt es Stimmen zurück.
 - **Allianzen** aus bis zu 5 Politikern mit Synergien:
   - gleiche Region → mehr Rückhalt (HP)
   - gleiche Epoche → mehr Angriff
   - 4+ verschiedene Klassen → mehr Tempo und schnellere Fähigkeiten
   - 3+ gleiche Klasse → Doktrin-Bonus
+  - gleiche Parteienfamilie → Fraktionsdisziplin (schnellere Fähigkeiten)
 - **Drei Schlachtmodi**:
   - ⚔️ **Gefecht**: klassische Auto-Schlacht um 3 Städte, bis 2:30.
   - 🗺️ **Feldzug**: große Karte mit Fluss und 3 Brücken, 5 befestigte Städte, Nachschublinien, Moral (bei 0 Kapitulation), Verstärkungswellen und politische Comebacks. Bis 7:00.
@@ -41,6 +42,21 @@ Der Spielstand liegt im `localStorage` des Browsers.
 | 💥 Artillerie | Sperrfeuer (Granatsalve) | 🛡️ 🪖 |
 | 🐎 Schnelle Brigade | Blitzangriff | 💥 🕊️ |
 | 🕊️ Diplomatie | Verhandlungen (Waffenstillstand + Heilung) | – |
+
+## Langzeit-Motivation & Stimmen verdienen
+
+Im Tab **🗳️ Wahlkampf** gibt es:
+- **💼 Diäten**: passives Einkommen (40 + 3 pro entdecktem Politiker pro Stunde, bis zu 12 h)
+- **🎁 Tagesbonus** und **erster Sieg des Tages**
+- **📋 Tägliche Aufträge**: 3 wechselnde Aufgaben pro Tag, Bonus für alle drei
+- **🏅 Erfolge**: Sammel-Sets pro Partei und Region, Siege, Kampagnenstufen, Karriere …
+- **❓ Politik-Quiz „Wer war's?“**: Porträts, maskierte Wikipedia-Auszüge und Ämter erraten
+
+Außerdem:
+- **🎯 Übungsgefechte** mit wählbarer Schwierigkeit, damit man auch dann Stimmen verdient, wenn die Kampagne gerade zu schwer ist
+- **🏖️ Ruhestand**: Politiker gegen Stimmen abgeben
+- **🎓 Karriere-Rang**: Erfahrung aus Schlachten, Packs und Quiz, Aufstiege bringen Stimmen
+- **💾 Spielstand-Export/-Import** im Profil (Klick auf den Namen)
 
 ## Gegen Freunde spielen
 
@@ -62,10 +78,11 @@ js/battle-sim.js   Deterministische Simulation (fester Zeitschritt, keine Trigon
 js/battle-view.js  Canvas-Renderer & Aufstellungs-Editor
 js/net.js          PeerJS-Anbindung
 js/ui.js           Packs, Sammlung, Allianzen
+js/earn.js         Wahlkampf: Diäten, Aufträge, Erfolge, Quiz, Ruhestand
 js/battle-ui.js    Schlacht-Menü, Aufstellung, HUD, Ergebnis, Lobby
 js/main.js         Start
 ```
 
-**Neue Politiker** trägst du in `RAW` in `js/data.js` ein: `[id, Name, Wikipedia-Titel, Flagge, Region, Ära, Klasse, Seltenheit, Amt]`. Die Werte werden automatisch aus Seltenheit und Klasse abgeleitet.
+**Neue Politiker** trägst du in `RAW` in `js/data.js` ein: `[id, Name, Wikipedia-Titel, Flagge, Region, Ära, Klasse, Seltenheit, Amt]`. Die Parteienfamilie ergänzt du in `PARTY_GROUPS`. Die Werte werden automatisch aus Seltenheit und Klasse abgeleitet.
 
 *Satirisches Spiel. Die Karten sagen nichts über die realen Personen aus.*

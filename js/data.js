@@ -150,7 +150,56 @@ const RAW = [
   ['curtin', 'John Curtin', 'John Curtin', '🇦🇺', 'AS', 'JH20', 'tank', 'C', 'Premierminister Australiens'],
   ['vargas', 'Getúlio Vargas', 'Getúlio Vargas', '🇧🇷', 'AM', 'JH20', 'tank', 'C', 'Präsident Brasiliens'],
   ['nasser', 'Gamal Abdel Nasser', 'Gamal Abdel Nasser', '🇪🇬', 'AF', 'JH20', 'art', 'C', 'Präsident Ägyptens'],
+  // ---------- Erweiterung ----------
+  ['karl', 'Karl der Große', 'Karl der Große', '👑', 'EU', 'VOR', 'tank', 'L', 'Kaiser des Frankenreichs'],
+  ['hatschepsut', 'Hatschepsut', 'Hatschepsut', '🇪🇬', 'AF', 'ANT', 'inf', 'L', 'Pharaonin'],
+  ['disraeli', 'Benjamin Disraeli', 'Benjamin Disraeli', '🇬🇧', 'EU', 'NEU', 'art', 'E', 'Premierminister'],
+  ['gladstone', 'William Gladstone', 'William Ewart Gladstone', '🇬🇧', 'EU', 'NEU', 'inf', 'E', 'Premierminister'],
+  ['mitterrand', 'François Mitterrand', 'François Mitterrand', '🇫🇷', 'EU', 'JH20', 'art', 'E', 'Präsident Frankreichs'],
+  ['rabin', 'Jitzchak Rabin', 'Jitzchak Rabin', '🇮🇱', 'AF', 'JH20', 'tank', 'R', 'Premierminister Israels'],
+  ['bhutto', 'Benazir Bhutto', 'Benazir Bhutto', '🇵🇰', 'AS', 'JH20', 'cav', 'R', 'Premierministerin Pakistans'],
+  ['selassie', 'Haile Selassie', 'Haile Selassie', '🇪🇹', 'AF', 'JH20', 'inf', 'R', 'Kaiser von Äthiopien'],
+  ['vdleyen', 'Ursula von der Leyen', 'Ursula von der Leyen', '🇪🇺', 'EU', 'JH21', 'art', 'R', 'Präsidentin der EU-Kommission'],
+  ['eleanor', 'Eleanor Roosevelt', 'Eleanor Roosevelt', '🇺🇸', 'AM', 'JH20', 'dip', 'R', 'First Lady & UN-Diplomatin'],
+  ['chirac', 'Jacques Chirac', 'Jacques Chirac', '🇫🇷', 'EU', 'JH20', 'tank', 'C', 'Präsident Frankreichs'],
+  ['jtrudeau', 'Justin Trudeau', 'Justin Trudeau', '🇨🇦', 'AM', 'JH21', 'cav', 'C', 'Premierminister Kanadas'],
+  ['sanchez', 'Pedro Sánchez', 'Pedro Sánchez', '🇪🇸', 'EU', 'JH21', 'inf', 'C', 'Ministerpräsident Spaniens'],
+  ['frederiksen', 'Mette Frederiksen', 'Mette Frederiksen', '🇩🇰', 'EU', 'JH21', 'inf', 'C', 'Ministerpräsidentin Dänemarks'],
+  ['marin', 'Sanna Marin', 'Sanna Marin', '🇫🇮', 'EU', 'JH21', 'cav', 'C', 'Ministerpräsidentin Finnlands'],
+  ['ramaphosa', 'Cyril Ramaphosa', 'Cyril Ramaphosa', '🇿🇦', 'AF', 'JH21', 'dip', 'C', 'Präsident Südafrikas'],
+  ['bachelet', 'Michelle Bachelet', 'Michelle Bachelet', '🇨🇱', 'AM', 'JH21', 'inf', 'C', 'Präsidentin Chiles'],
+  ['aquino', 'Corazon Aquino', 'Corazon Aquino', '🇵🇭', 'AS', 'JH20', 'cav', 'C', 'Präsidentin der Philippinen'],
+  ['brundtland', 'Gro Harlem Brundtland', 'Gro Harlem Brundtland', '🇳🇴', 'EU', 'JH20', 'inf', 'C', 'Ministerpräsidentin Norwegens'],
+  ['heinemann', 'Gustav Heinemann', 'Gustav Heinemann', '🇩🇪', 'EU', 'JH20', 'art', 'C', 'Bundespräsident'],
+  ['scheel', 'Walter Scheel', 'Walter Scheel', '🇩🇪', 'EU', 'JH20', 'cav', 'C', 'Bundespräsident'],
+  ['steinmeier', 'Frank-Walter Steinmeier', 'Frank-Walter Steinmeier', '🇩🇪', 'EU', 'JH21', 'inf', 'C', 'Bundespräsident'],
+  ['schaeuble', 'Wolfgang Schäuble', 'Wolfgang Schäuble', '🇩🇪', 'EU', 'JH21', 'art', 'C', 'Bundestagspräsident'],
+  ['kelly', 'Petra Kelly', 'Petra Kelly', '🇩🇪', 'EU', 'JH20', 'cav', 'C', 'Mitgründerin der Grünen'],
+  ['kretschmann', 'Winfried Kretschmann', 'Winfried Kretschmann', '🇩🇪', 'EU', 'JH21', 'tank', 'C', 'Ministerpräsident Baden-Württembergs'],
 ];
+
+
+/* Parteienfamilien – nach Parteizugehörigkeit im wichtigsten Amt (Monarchen & Antike: „Krone, Hof & Senat“) */
+const PARTIES = {
+  KON: { name: 'Christdemokraten & Konservative', short: 'Konservative', icon: '⚫', color: '#64748b' },
+  SOZ: { name: 'Sozialdemokraten & Arbeiterparteien', short: 'Sozialdemokraten', icon: '🔴', color: '#ef4444' },
+  LIB: { name: 'Liberale & Demokraten', short: 'Liberale', icon: '🟡', color: '#eab308' },
+  GRU: { name: 'Grüne & Bürgerbewegungen', short: 'Grüne & Bewegungen', icon: '🟢', color: '#22c55e' },
+  UNA: { name: 'Unabhängigkeits- & Befreiungsbewegungen', short: 'Unabhängigkeit', icon: '🕊️', color: '#06b6d4' },
+  KRO: { name: 'Krone, Hof & Senat', short: 'Krone & Senat', icon: '👑', color: '#a855f7' },
+  SON: { name: 'Internationale & Sonstige', short: 'Sonstige', icon: '🌐', color: '#94a3b8' },
+};
+const PARTY_GROUPS = {
+  KON: 'lincoln churchill adenauer merkel degaulle thatcher kohl troosevelt eisenhower merz kiesinger erhard weizsaecker degasperi schuman abe disraeli vdleyen chirac schaeuble',
+  SOZ: 'brandt schmidt goldameir ardern lula palme scholz schroeder reuter blair attlee kreisky allende mujica curtin mitterrand rabin bhutto sanchez frederiksen marin bachelet brundtland heinemann steinmeier',
+  LIB: 'fdr kennedy obama jefferson juarez macron sirleaf stresemann heuss genscher carter truman ptrudeau rutte gladstone eleanor jtrudeau aquino scheel',
+  GRU: 'havel baerbock habeck fischer walesa kelly kretschmann',
+  UNA: 'mandela gandhi washington bolivar ataturk leekuanyew sunyatsen nkrumah nehru franklin indiragandhi nyerere sadat kenyatta sukarno nasser ramaphosa',
+  KRO: 'caesar napoleon bismarck kleopatra alexander elisabeth1 katharina friedrich2 mariatheresia augustus perikles richelieu cicero solon metternich talleyrand ashoka hammurapi qinshihuang medici saladin karl hatschepsut selassie',
+  SON: 'gorbatschow monnet annan hammarskjoeld vargas',
+};
+const PARTY_BY_ID = {};
+for (const [k, ids] of Object.entries(PARTY_GROUPS)) ids.split(' ').forEach((id) => (PARTY_BY_ID[id] = k));
 
 function _hash(str) {
   let h = 2166136261 >>> 0;
@@ -165,7 +214,7 @@ const POLITICIANS = RAW.map(([id, name, wiki, flag, region, era, cls, rarity, of
   const n = (shift) => ((h >>> shift) & 15) - 7; // -7..+8
   const clamp = (v) => Math.max(15, Math.min(99, v));
   return {
-    id, name, wiki, flag, region, era, cls, rarity, office,
+    id, name, wiki, flag, region, era, cls, rarity, office, party: PARTY_BY_ID[id] || 'SON',
     atk: clamp(base + tilt.a + n(0)),
     def: clamp(base + tilt.v + n(4)),
     tac: clamp(base + tilt.t + n(8)),
@@ -204,6 +253,14 @@ function computeSynergies(ids) {
     if (b) {
       ps.forEach((p) => (per[p.id].atk += b));
       list.push({ icon: '⏳', name: `Zeitgenossen: ${ERAS[k].short}`, count: ps.length, text: `+${Math.round(b * 100)} % Angriff`, ids: ps.map((p) => p.id) });
+    }
+  }
+  // Partei -> Fraktionsdisziplin (schnellere Fähigkeiten)
+  for (const [k, ps] of Object.entries(group((p) => p.party))) {
+    const b = SYNERGY_TIERS[Math.min(ps.length, 5)];
+    if (b) {
+      ps.forEach((p) => (per[p.id].cd -= b));
+      list.push({ icon: PARTIES[k].icon, name: `Fraktion: ${PARTIES[k].short}`, count: ps.length, text: `${Math.round(b * 100)} % schnellere Fähigkeiten`, ids: ps.map((p) => p.id) });
     }
   }
   // Klassenvielfalt -> Tempo & Fähigkeiten

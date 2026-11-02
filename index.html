@@ -13,12 +13,14 @@
     <div class="brand">🏛️ <span>Politic<b>Gacha</b></span></div>
     <nav class="tabs">
       <button data-tab="packs" class="active">🎴 <span>Packs</span></button>
+      <button data-tab="earn">🗳️ <span>Wahlkampf</span><em id="earn-badge" class="badge hidden"></em></button>
       <button data-tab="collection">📚 <span>Sammlung</span></button>
       <button data-tab="alliances">🤝 <span>Allianzen</span></button>
       <button data-tab="battle">⚔️ <span>Schlacht</span></button>
     </nav>
     <div class="wallet">
-      <button id="player-name" class="name-btn" title="Namen ändern">👤 <span></span></button>
+      <div class="rank" id="rank"></div>
+      <button id="player-name" class="name-btn" title="Profil & Einstellungen">👤 <span></span></button>
       <div class="votes" title="Stimmen – die Währung für Packs">🗳️ <span id="votes">0</span></div>
     </div>
   </header>
@@ -43,6 +45,12 @@
       </details>
     </section>
 
+    <!-- WAHLKAMPF -->
+    <section id="screen-earn" class="screen">
+      <div class="section-head"><h2>🗳️ Wahlkampf <small>Stimmen sammeln abseits des Schlachtfelds</small></h2></div>
+      <div id="earn-root"></div>
+    </section>
+
     <!-- SAMMLUNG -->
     <section id="screen-collection" class="screen">
       <div class="section-head">
@@ -52,6 +60,7 @@
           <select id="f-region"><option value="">Alle Regionen</option></select>
           <select id="f-era"><option value="">Alle Epochen</option></select>
           <select id="f-class"><option value="">Alle Klassen</option></select>
+          <select id="f-party"><option value="">Alle Parteien</option></select>
           <select id="f-sort">
             <option value="power">Sortieren: Stärke</option>
             <option value="rarity">Sortieren: Seltenheit</option>
@@ -120,6 +129,7 @@
   <script src="js/battle-view.js"></script>
   <script src="js/net.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/earn.js"></script>
   <script src="js/battle-ui.js"></script>
   <script src="js/main.js"></script>
 </body>
