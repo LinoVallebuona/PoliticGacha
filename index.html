@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PoliticGacha</title>
+  <meta name="description" content="Ziehe Politiker aus Packs, schmiede Allianzen und schlage deine Freunde in einer Top-Down-Kriegssimulation.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🏛️ <span>Politic<b>Gacha</b></span></div>
+    <nav class="tabs">
+      <button data-tab="packs" class="active">🎴 <span>Packs</span></button>
+      <button data-tab="collection">📚 <span>Sammlung</span></button>
+      <button data-tab="alliances">🤝 <span>Allianzen</span></button>
+      <button data-tab="battle">⚔️ <span>Schlacht</span></button>
+    </nav>
+    <div class="wallet">
+      <button id="player-name" class="name-btn" title="Namen ändern">👤 <span></span></button>
+      <div class="votes" title="Stimmen – die Währung für Packs">🗳️ <span id="votes">0</span></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- PACKS -->
+    <section id="screen-packs" class="screen active">
+      <div class="hero">
+        <div>
+          <h1>Ziehe Politiker aus Packs</h1>
+          <p>Sammle <b id="pol-count"></b> Staatsfrauen und Staatsmänner aus 2.500 Jahren Geschichte. Doppelte Karten steigern das Level. Porträts und Kurzbiografien kommen live aus der Wikipedia.</p>
+        </div>
+        <div class="hero-side">
+          <button id="daily-btn" class="btn gold">🎁 Tagesbonus: +200 Stimmen</button>
+          <div class="pity" id="pity"></div>
+        </div>
+      </div>
+      <div class="pack-grid" id="pack-grid"></div>
+      <details class="odds">
+        <summary>Wahrscheinlichkeiten &amp; Regeln</summary>
+        <div id="odds-table"></div>
+      </details>
+    </section>
+
+    <!-- SAMMLUNG -->
+    <section id="screen-collection" class="screen">
+      <div class="section-head">
+        <h2>Sammlung <small id="coll-progress"></small></h2>
+        <div class="filters">
+          <select id="f-rarity"><option value="">Alle Seltenheiten</option></select>
+          <select id="f-region"><option value="">Alle Regionen</option></select>
+          <select id="f-era"><option value="">Alle Epochen</option></select>
+          <select id="f-class"><option value="">Alle Klassen</option></select>
+          <select id="f-sort">
+            <option value="power">Sortieren: Stärke</option>
+            <option value="rarity">Sortieren: Seltenheit</option>
+            <option value="name">Sortieren: Name</option>
+          </select>
+          <label class="chk"><input type="checkbox" id="f-missing"> Fehlende zeigen</label>
+        </div>
+      </div>
+      <div class="card-grid" id="coll-grid"></div>
+    </section>
+
+    <!-- ALLIANZEN -->
+    <section id="screen-alliances" class="screen">
+      <div class="alliance-layout">
+        <aside class="alliance-list">
+          <h2>Deine Allianzen</h2>
+          <div id="alliance-list"></div>
+          <button id="new-alliance" class="btn">＋ Neue Allianz</button>
+        </aside>
+        <div class="alliance-editor" id="alliance-editor"></div>
+      </div>
+    </section>
+
+    <!-- SCHLACHT -->
+    <section id="screen-battle" class="screen">
+      <div id="battle-menu"></div>
+      <div id="battle-prep" class="hidden"></div>
+      <div id="battle-fight" class="hidden">
+        <div class="hud">
+          <div class="hud-team t0"><div class="hud-name" id="hud-n0"></div><div class="hud-score" id="hud-s0"></div></div>
+          <div class="hud-mid">
+            <div class="hud-time" id="hud-time">0:00</div>
+            <div class="hud-ctrl">
+              <button data-speed="0" title="Pause">⏸</button>
+              <button data-speed="1" class="active">1×</button>
+              <button data-speed="2">2×</button>
+              <button data-speed="4">4×</button>
+              <button id="hud-skip" title="Direkt zum Ergebnis">⏭</button>
+            </div>
+          </div>
+          <div class="hud-team t1"><div class="hud-name" id="hud-n1"></div><div class="hud-score" id="hud-s1"></div></div>
+        </div>
+        <div class="fight-layout">
+          <div class="bat-list" id="bat-list-0"></div>
+          <div class="canvas-wrap"><canvas id="battle-canvas"></canvas></div>
+          <div class="bat-list" id="bat-list-1"></div>
+        </div>
+        <div class="battle-log" id="battle-log"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden"><div class="modal-box" id="modal-box"></div></div>
+  <div id="pack-overlay" class="pack-overlay hidden"></div>
+  <div id="toasts"></div>
+
+  <script src="js/vendor/peerjs.min.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/wiki.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/battle-sim.js"></script>
+  <script src="js/battle-view.js"></script>
+  <script src="js/net.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/battle-ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
