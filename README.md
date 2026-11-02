@@ -4,6 +4,10 @@ Ein Gacha-Spiel im Stil von *Wiki Gacha*, nur mit Politikern. Du ziehst Staatsfr
 
 ## Spielen
 
+▶️ **Online spielen:** https://linovallebuona.github.io/PoliticGacha/
+
+(Jeder Push auf `main` wird per GitHub Actions automatisch veröffentlicht, siehe `.github/workflows/pages.yml`.)
+
 Es gibt keinen Build-Schritt und keine Abhängigkeiten. Öffne einfach `index.html` im Browser oder hoste den Ordner statisch, zum Beispiel über GitHub Pages:
 
 ```bash
