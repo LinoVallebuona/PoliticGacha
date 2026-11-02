@@ -6,6 +6,10 @@ function updateHeader() {
   const v = $('#votes');
   if (v.textContent !== fmt(S.votes)) { v.textContent = fmt(S.votes); v.parentElement.classList.remove('bump'); void v.offsetWidth; v.parentElement.classList.add('bump'); }
   $('#player-name span').textContent = S.name;
+  const lvl = S.level || 1;
+  const rk = $('#rank');
+  if (rk) { rk.innerHTML = `<b>Lv ${lvl}</b> ${esc(rankName(lvl))}<i style="width:${Math.min(100, ((S.xp || 0) / xpForLevel(lvl)) * 100)}%"></i>`; rk.title = `${S.xp || 0} / ${xpForLevel(lvl)} Erfahrung bis zum nächsten Aufstieg`; }
+  if (typeof updateEarnBadge === 'function') updateEarnBadge();
   const daily = $('#daily-btn');
   if (daily) { daily.disabled = !dailyAvailable(); daily.textContent = dailyAvailable() ? `🎁 Tagesbonus: +${DAILY_BONUS} Stimmen` : '✅ Tagesbonus abgeholt'; }
   const pity = $('#pity');
@@ -19,6 +23,7 @@ function switchTab(tab) {
   if (tab === 'alliances') renderAlliances();
   if (tab === 'battle') BattleUI.showMenu();
   if (tab === 'packs') updateHeader();
+  if (tab === 'earn') renderEarn();
   window.scrollTo({ top: 0 });
 }
 
@@ -59,7 +64,7 @@ function cardHTML(id, opts = {}) {
     ${portraitHTML(p)}
     <div class="card-name">${esc(p.name)}</div>
     <div class="card-office">${esc(p.office)}</div>
-    <div class="card-tags"><span class="tag">${CLASSES[p.cls].icon} ${CLASSES[p.cls].name}</span><span class="tag">${REGIONS[p.region].icon} ${esc(REGIONS[p.region].name)}</span><span class="tag">⏳ ${ERAS[p.era].short}</span></div>
+    <div class="card-tags"><span class="tag">${CLASSES[p.cls].icon} ${CLASSES[p.cls].name}</span><span class="tag">${REGIONS[p.region].icon} ${esc(REGIONS[p.region].name)}</span><span class="tag">⏳ ${ERAS[p.era].short}</span><span class="tag" title="${esc(PARTIES[p.party].name)}">${PARTIES[p.party].icon} ${esc(PARTIES[p.party].short)}</span></div>
     ${statsHTML(p, level)}
     ${opts.showCopies && c ? `<div class="copies">${c.copies}× gezogen${c.level < MAX_LEVEL ? ` · nächstes Level bei ${LEVEL_COPIES[c.level]}` : ' · Max-Level'}</div>` : ''}
   </div>`;
@@ -90,7 +95,7 @@ function showCardDetail(id) {
       <div>${cardHTML(id, { showCopies: true })}</div>
       <div>
         <h2>${p.flag} ${esc(p.name)}</h2>
-        <div class="muted">${esc(p.office)} · ${esc(REGIONS[p.region].name)} · ${esc(ERAS[p.era].name)} · <span style="color:${R.color}">${R.name}</span></div>
+        <div class="muted">${esc(p.office)} · ${esc(REGIONS[p.region].name)} · ${esc(ERAS[p.era].name)} · ${PARTIES[p.party].icon} ${esc(PARTIES[p.party].name)} · <span style="color:${R.color}">${R.name}</span></div>
         <div class="ability-box">
           <b>${C.icon} ${C.name}</b> – ${C.count} Einheiten, Reichweite ${C.range}<br>
           <b>Fähigkeit „${C.ability}“:</b> ${C.abilityDesc}<br>
@@ -98,7 +103,8 @@ function showCardDetail(id) {
         </div>
         <p class="extract" id="wiki-extract">Lade Wikipedia-Eintrag …</p>
         <p class="muted"><a id="wiki-link" href="https://de.wikipedia.org/wiki/${encodeURIComponent(p.wiki.replace(/ /g, '_'))}" target="_blank" rel="noopener">Auf Wikipedia lesen ↗</a></p>
-        ${al ? `<button class="btn ${inAl ? 'danger' : 'primary'}" id="detail-al">${inAl ? '− Aus' : '＋ Zu'} „${esc(al.name)}“ ${inAl ? 'entfernen' : 'hinzufügen'}</button>` : ''}
+        <div class="row">${al ? `<button class="btn ${inAl ? 'danger' : 'primary'}" id="detail-al">${inAl ? '− Aus' : '＋ Zu'} „${esc(al.name)}“ ${inAl ? 'entfernen' : 'hinzufügen'}</button>` : ''}
+        ${owned(id) ? `<button class="btn" id="detail-retire" title="Karte abgeben und Stimmen erhalten">🏖️ Ruhestand (+${retireValue(id)} 🗳️)</button>` : ''}</div>
       </div>
     </div>`);
   Wiki.get(p).then((info) => {
@@ -109,6 +115,8 @@ function showCardDetail(id) {
   });
   const btn = $('#detail-al');
   if (btn) btn.onclick = () => { toggleMember(al, id); closeModal(); renderCollection(); };
+  const rb = $('#detail-retire');
+  if (rb) rb.onclick = () => { if (retirePolitician(id)) { closeModal(); renderCollection(); } };
 }
 
 /* ---------- Packs ---------- */
@@ -119,6 +127,7 @@ function renderPacks() {
     let sel = '';
     if (pk.filter === 'region') sel = `<select data-filter>${Object.entries(REGIONS).map(([k, r]) => `<option value="${k}">${r.icon} ${r.name}</option>`).join('')}</select>`;
     if (pk.filter === 'era') sel = `<select data-filter>${Object.entries(ERAS).map(([k, e]) => `<option value="${k}">${e.name}</option>`).join('')}</select>`;
+    if (pk.filter === 'party') sel = `<select data-filter>${Object.entries(PARTIES).map(([k, e]) => `<option value="${k}">${e.icon} ${e.name} (${POLITICIANS.filter((p) => p.party === k).length})</option>`).join('')}</select>`;
     return `<div class="pack pack-${pk.id}" data-pack="${pk.id}">
       <div><div class="pack-icon">${pk.icon}</div><h3>${pk.name}</h3><p>${pk.desc}</p></div>
       <div>${sel}<button class="btn gold" style="width:100%">Öffnen · 🗳️ ${pk.cost}</button></div>
@@ -173,14 +182,15 @@ function initFilters() {
   $('#f-rarity').innerHTML += RARITY_ORDER.map((k) => `<option value="${k}">${'★'.repeat(RARITIES[k].stars)} ${RARITIES[k].name}</option>`).join('');
   $('#f-region').innerHTML += Object.entries(REGIONS).map(([k, r]) => `<option value="${k}">${r.icon} ${r.name}</option>`).join('');
   $('#f-era').innerHTML += Object.entries(ERAS).map(([k, e]) => `<option value="${k}">${e.name}</option>`).join('');
+ $('#f-party').innerHTML += Object.entries(PARTIES).map(([k, e]) => `<option value="${k}">${e.icon} ${e.name}</option>`).join('');
   $('#f-class').innerHTML += Object.entries(CLASSES).map(([k, c]) => `<option value="${k}">${c.icon} ${c.name}</option>`).join('');
   $$('.filters select, .filters input').forEach((n) => (n.onchange = renderCollection));
 }
 
 function filteredPoliticians() {
-  const fr = $('#f-rarity').value, fg = $('#f-region').value, fe = $('#f-era').value, fc = $('#f-class').value, sort = $('#f-sort').value;
+  const fr = $('#f-rarity').value, fg = $('#f-region').value, fe = $('#f-era').value, fc = $('#f-class').value, fp = $('#f-party').value, sort = $('#f-sort').value;
   const showMissing = $('#f-missing').checked;
-  let list = POLITICIANS.filter((p) => (!fr || p.rarity === fr) && (!fg || p.region === fg) && (!fe || p.era === fe) && (!fc || p.cls === fc));
+  let list = POLITICIANS.filter((p) => (!fr || p.rarity === fr) && (!fg || p.region === fg) && (!fe || p.era === fe) && (!fc || p.cls === fc) && (!fp || p.party === fp));
   if (!showMissing) list = list.filter((p) => owned(p.id));
   const rk = (p) => RARITY_ORDER.indexOf(p.rarity);
   list.sort((a, b) => {

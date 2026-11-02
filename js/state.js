@@ -10,6 +10,7 @@ const PACKS = [
   { id: 'coalition', name: 'Koalitions-Pack', icon: '🤝', cost: 280, cards: 5, minRarity: 'E', desc: '5 Politiker, mindestens 1× Episch oder besser.' },
   { id: 'region', name: 'Regional-Pack', icon: '🌍', cost: 160, cards: 3, minRarity: 'R', filter: 'region', desc: '3 Politiker aus einer Region, mind. 1× Selten.' },
   { id: 'era', name: 'Epochen-Pack', icon: '⏳', cost: 160, cards: 3, minRarity: 'R', filter: 'era', desc: '3 Politiker aus einer Epoche, mind. 1× Selten.' },
+  { id: 'party', name: 'Partei-Pack', icon: '🏛️', cost: 180, cards: 3, minRarity: 'R', filter: 'party', desc: '3 Politiker einer Parteienfamilie, mind. 1× Selten. Ideal für Fraktions-Synergien.' },
 ];
 
 function defaultState() {
@@ -26,6 +27,8 @@ function defaultState() {
     lastDaily: '',
     stats: { pulls: 0, wins: 0, losses: 0, draws: 0, pvpWins: 0, pvpLosses: 0 },
     starterGiven: false,
+    level: 1,
+    xp: 0,
   };
 }
 
@@ -106,6 +109,8 @@ function openPack(packId, filterValue) {
   let pool = POLITICIANS;
   if (pack.filter === 'region') pool = POLITICIANS.filter((p) => p.region === filterValue);
   if (pack.filter === 'era') pool = POLITICIANS.filter((p) => p.era === filterValue);
+  if (pack.filter === 'party') pool = POLITICIANS.filter((p) => p.party === filterValue);
+  if (!pool.length) pool = POLITICIANS;
   const rng = Math.random;
   const results = [];
   const guaranteeIdx = pack.minRarity ? pack.cards - 1 : -1;
@@ -118,6 +123,7 @@ function openPack(packId, filterValue) {
   }
   saveState();
   updateHeader();
+  if (typeof track === 'function') { track('pack'); gainXp(5 * pack.cards); }
   return results;
 }
 
@@ -192,4 +198,40 @@ function claimDaily() {
   S.lastDaily = todayKey();
   addVotes(DAILY_BONUS);
   return true;
+}
+
+/* ---------- Karriere-Rang (Erfahrung) ---------- */
+const RANKS = [
+  'Gemeinderat', 'Ortsvorsteher:in', 'Bürgermeister:in', 'Kreistagsmitglied', 'Landtagsabgeordnete:r', 'Staatssekretär:in',
+  'Landesminister:in', 'Ministerpräsident:in', 'Bundestagsabgeordnete:r', 'Fraktionschef:in', 'Bundesminister:in', 'Vizekanzler:in',
+  'Kanzler:in', 'EU-Kommissar:in', 'Kommissionspräsident:in', 'UN-Generalsekretär:in', 'Weltstaatsoberhaupt',
+];
+function xpForLevel(l) { return 80 + 40 * l; }
+function rankName(level) { return RANKS[Math.min(RANKS.length - 1, Math.floor((level - 1) / 2))]; }
+function gainXp(n) {
+  S.xp = (S.xp || 0) + Math.round(n);
+  S.level = S.level || 1;
+  let ups = 0, reward = 0;
+  while (S.xp >= xpForLevel(S.level)) {
+    S.xp -= xpForLevel(S.level);
+    S.level++;
+    ups++;
+    reward += 100 + 25 * S.level;
+  }
+  if (ups) {
+    S.votes += reward;
+    toast(`⬆️ Aufstieg! Level ${S.level}: ${esc(rankName(S.level))} · +${reward} 🗳️`, 'good');
+  }
+  saveState();
+  updateHeader();
+}
+
+/* ---------- Spielstand sichern ---------- */
+function exportSave() { return 'PGS1.' + btoa(unescape(encodeURIComponent(JSON.stringify(S)))); }
+function importSave(code) {
+  code = String(code || '').trim();
+  if (!code.startsWith('PGS1.')) throw new Error('Kein gültiger Spielstand-Code');
+  const data = JSON.parse(decodeURIComponent(escape(atob(code.slice(5)))));
+  if (!data || typeof data !== 'object' || !data.collection) throw new Error('Spielstand unvollständig');
+  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }

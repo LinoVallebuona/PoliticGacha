@@ -53,6 +53,12 @@ class Lockstep {
   }
 }
 
+const PRACTICE = {
+  easy: { name: 'Leicht', mult: 0.8, win: 35, icon: '🟢' },
+  normal: { name: 'Normal', mult: 1.0, win: 55, icon: '🟡' },
+  hard: { name: 'Schwer', mult: 1.2, win: 85, icon: '🔴' },
+};
+
 const BattleUI = (() => {
   let ctx = {};          // aktueller Kampfkontext
   let deployView = null, battleView = null, lockstep = null;
@@ -130,6 +136,10 @@ const BattleUI = (() => {
         <div class="mode mode-ai"><div class="mode-icon">🤖</div><h3>Kampagne gegen KI</h3>
           <p>Die KI stellt eine Allianz passend zu deiner Stärke auf und wird mit jeder Stufe stärker (aktuell ${Math.round(aiDifficulty(stageOf(mode)) * 100)} % deiner Stärke). Jeder Sieg bringt Stimmen.${mode === 'command' ? ' Die KI setzt ebenfalls politische Maßnahmen ein.' : ''}</p>
           <button class="btn primary" id="bm-ai">${cfg.icon} ${cfg.name} · Stufe ${stageOf(mode)} starten</button></div>
+        <div class="mode mode-practice"><div class="mode-icon">🎯</div><h3>Übungsgefecht</h3>
+          <p>Freies Gefecht gegen die KI mit wählbarer Schwierigkeit. Es zählt nicht für die Kampagne, bringt aber immer Stimmen, Erfahrung und Fortschritt bei den Aufträgen.</p>
+          <div class="row"><select id="bm-diff">${Object.entries(PRACTICE).map(([k, d]) => `<option value="${k}" ${S.practiceDiff === k ? 'selected' : ''}>${d.icon} ${d.name} (${Math.round(d.mult * 100)} % · Sieg +${Math.round(d.win * cfg.reward)})</option>`).join('')}</select>
+          <button class="btn primary" id="bm-practice">Starten</button></div></div>
         <div class="mode mode-live"><div class="mode-icon">🌐</div><h3>Live gegen Freunde</h3>
           <p>Erstelle einen Raum und schicke den Code an einen Freund. Ihr stellt gleichzeitig auf und erlebt dieselbe Schlacht live.${mode === 'command' ? ' Im Kommando-Modus gebt ihr beide in Echtzeit Befehle.' : ''}</p>
           <button class="btn primary" id="bm-live">Online-Raum öffnen</button></div>
@@ -148,6 +158,7 @@ const BattleUI = (() => {
     $('#bm-edit').onclick = () => switchTab('alliances');
     const need = () => { const a = activeAlliance(); if (!a || !a.members.length) { toast('Stelle zuerst eine Allianz mit mindestens einem Politiker auf!', 'bad'); switchTab('alliances'); return null; } return a; };
     $('#bm-ai').onclick = () => { if (need()) startAI(); };
+    $('#bm-practice').onclick = () => { S.practiceDiff = $('#bm-diff').value; saveState(); if (need()) startAI(S.practiceDiff); };
     $('#bm-live').onclick = () => { if (need()) showLiveLobby(); };
     $('#bm-code').onclick = () => { if (need()) showCodeMode(); };
   }
@@ -162,19 +173,21 @@ const BattleUI = (() => {
     saveState();
   }
 
-  function startAI() {
+  function startAI(practice) {
+    if (typeof practice !== 'string' || !PRACTICE[practice]) practice = null;
     const mode = curMode();
     const stage = stageOf(mode);
     const seed = randomSeed();
     const army = myArmy();
-    const enemy = makeAiArmy(stage, seed, armyPower(army));
+    const enemy = makeAiArmy(practice ? Math.max(1, stage - 1) : stage, seed, armyPower(army), practice ? PRACTICE[practice].mult : 0);
+    if (practice) enemy.player = `KI · Übung (${PRACTICE[practice].name})`;
     showPrep({
-      title: `${BATTLE_MODES[mode].icon} ${BATTLE_MODES[mode].name} · Kampagne Stufe ${stage}`,
+      title: `${BATTLE_MODES[mode].icon} ${BATTLE_MODES[mode].name} · ${practice ? `🎯 Übungsgefecht (${PRACTICE[practice].name})` : `Kampagne Stufe ${stage}`}`,
       seed, mode, army, myTeam: 0, enemy, enemyVisible: true,
       actions: `<button class="btn" id="pr-back">← Zurück</button><button class="btn primary big" id="pr-go">⚔️ Schlacht beginnen</button>`,
       bind: () => {
         $('#pr-back').onclick = showMenu;
-        $('#pr-go').onclick = () => startFight({ seed, armies: [deployView.army, enemy], myTeam: 0, opp: 'ai', mode });
+        $('#pr-go').onclick = () => startFight({ seed, armies: [deployView.army, enemy], myTeam: 0, opp: 'ai', mode, practice });
       },
     });
   }
@@ -215,14 +228,14 @@ const BattleUI = (() => {
   }
 
   /* ---------- Kampf ---------- */
-  function startFight({ seed, armies, myTeam, opp, mode }) {
+  function startFight({ seed, armies, myTeam, opp, mode, practice }) {
     cleanup();
     closeModal();
     armies = armies.map((a) => sanitizeArmy(JSON.parse(JSON.stringify(a))));
     const cfg = BATTLE_MODES[mode];
     let control = ['auto', 'auto'];
     if (cfg.command) control = opp === 'live' ? ['player', 'player'] : myTeam === 0 ? ['player', 'ai'] : ['ai', 'player'];
-    ctx = { mode, seed, myTeam, armies, opp, cfg };
+    ctx = { mode, seed, myTeam, armies, opp, cfg, practice: practice || null };
     show('fight');
     const battle = new Battle(seed, armies, { mode, control });
     ctx.battle = battle;
@@ -429,7 +442,11 @@ const BattleUI = (() => {
     const outcome = sum.winner === -1 ? 'draw' : sum.winner === me ? 'win' : 'lose';
     let reward = 0;
     const stage = stageOf(ctx.mode);
-    if (ctx.opp === 'ai') {
+    if (ctx.opp === 'ai' && ctx.practice) {
+      const d = PRACTICE[ctx.practice];
+      reward = outcome === 'win' ? d.win : outcome === 'draw' ? Math.round(d.win / 2) : 15;
+      if (outcome === 'win') S.stats.wins++; else if (outcome === 'lose') S.stats.losses++; else S.stats.draws++;
+    } else if (ctx.opp === 'ai') {
       reward = outcome === 'win' ? 80 + 20 * stage : outcome === 'draw' ? 40 : 25;
       if (outcome === 'win') { S.stats.wins++; S.stages[ctx.mode] = stage + 1; } else if (outcome === 'lose') S.stats.losses++; else S.stats.draws++;
     } else {
@@ -443,15 +460,36 @@ const BattleUI = (() => {
       const k = String(ctx.seed);
       if (S.codeFights[k]) reward = 0; else S.codeFights[k] = 1;
     }
+ // Aufträge, Erfahrung, erster Sieg des Tages
+    const surrendered = /aufgegeben/.test(sum.reason) && outcome === 'lose';
+    let firstWin = 0;
+    if (!surrendered) {
+      ensureEarnState();
+      track('battle');
+      track(ctx.mode);
+      const mine = (k) => B.log.filter((l) => l.kind === k && l.team === me).length;
+      track('capture', mine('capture'));
+      track('policy', mine('policy'));
+      track('ability', B.bats.filter((b) => b.team === me).reduce((a, b) => a + b.abilities, 0));
+      track('kills', sum.bats.filter((b) => b.team === me).reduce((a, b) => a + b.kills, 0));
+      if (outcome === 'win') {
+        track('win');
+        if (ctx.mode === 'grand') track('grandWin');
+        if (ctx.mode === 'command') track('commandWin');
+        if (ctx.opp !== 'ai') track('pvpWin');
+        if (!S.daily.firstWin) { S.daily.firstWin = true; firstWin = FIRST_WIN_BONUS; reward += firstWin; }
+      }
+    }
     addVotes(reward);
     saveState();
+    const xp = surrendered ? 0 : Math.round((outcome === 'win' ? 40 : 15) * cfg.reward);
     const mvp = sum.bats.reduce((a, b) => (b.dmg + b.heal > a.dmg + a.heal ? b : a), sum.bats[0]);
     const rows = (t) => sum.bats.filter((b) => b.team === t).map((b) => `<tr>
         <td>${b === mvp ? '⭐ ' : ''}${CLASSES[b.cls].icon} ${esc(b.name)}</td><td class="n">${fmt(b.dmg)}</td><td class="n">${b.kills}</td><td class="n">${fmt(b.heal)}</td>
         <td>${b.alive ? (b.leaderGone ? '🏳️ zurückgetreten' : '✅ im Amt') : '💀 aufgerieben'}</td></tr>`).join('');
     const title = { win: '🏆 Wahlsieg!', lose: '📉 Niederlage', draw: '🤝 Große Koalition' }[outcome];
     const actions = ctx.opp === 'ai'
-      ? `<button class="btn" id="rs-menu">Zum Menü</button><button class="btn primary" id="rs-next">${outcome === 'win' ? `Weiter zu Stufe ${stageOf(ctx.mode)}` : 'Nochmal versuchen'}</button>`
+      ? `<button class="btn" id="rs-menu">Zum Menü</button><button class="btn primary" id="rs-next">${ctx.practice ? 'Neues Übungsgefecht' : outcome === 'win' ? `Weiter zu Stufe ${stageOf(ctx.mode)}` : 'Nochmal versuchen'}</button>`
       : ctx.opp === 'live'
         ? `<button class="btn" id="rs-leave">Raum verlassen</button><button class="btn primary" id="rs-rematch">🔁 Revanche</button>`
         : `<button class="btn" id="rs-menu">Zum Menü</button>`;
@@ -460,11 +498,12 @@ const BattleUI = (() => {
       <div class="result-sub">${cfg.icon} ${cfg.name} · ${esc(sum.reason)} · ${fmtTime(sum.time)} · Wertung ${sum.scores[0].toFixed(0)} : ${sum.scores[1].toFixed(0)}</div>
       ${[0, 1].map((t) => `<h3 style="color:${TEAM_COLORS[t].light}">${esc(ctx.armies[t].name)}${t === me ? ' (Du)' : ''}</h3>
         <table class="result-table"><tr><th>Bataillon</th><th>Schaden</th><th>Besiegt</th><th>Heilung</th><th>Status</th></tr>${rows(t)}</table>`).join('')}
-      <div class="reward">${reward ? `+${reward} 🗳️ Stimmen` : ctx.opp === 'code' ? 'Keine Belohnung (Code-Paarung bereits gewertet)' : 'Keine Belohnung'}</div>
+      <div class="reward">${reward ? `+${reward} 🗳️ Stimmen${firstWin ? ` <small>(inkl. ${firstWin} für den ersten Sieg des Tages)</small>` : ''}` : ctx.opp === 'code' ? 'Keine Belohnung (Code-Paarung bereits gewertet)' : 'Keine Belohnung'}${xp ? `<div class="help">+${xp} Erfahrung</div>` : ''}</div>
       <div class="row" style="justify-content:center">${actions}</div>`);
+    if (xp) gainXp(xp);
     const go = (fn) => () => { closeModal(); fn(); };
     if ($('#rs-menu')) $('#rs-menu').onclick = go(showMenu);
-    if ($('#rs-next')) $('#rs-next').onclick = go(startAI);
+    if ($('#rs-next')) $('#rs-next').onclick = go(() => startAI(ctx.practice));
     if ($('#rs-leave')) $('#rs-leave').onclick = go(() => { Net.close(); live.phase = 'idle'; showMenu(); });
     if ($('#rs-rematch')) $('#rs-rematch').onclick = go(() => {
       if (Net.role === 'host') newLiveRound(); else { Net.send({ t: 'rematch' }); showLiveLobby('Revanche angefragt – warte auf den Host …'); }

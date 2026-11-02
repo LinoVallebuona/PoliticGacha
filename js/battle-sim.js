@@ -882,7 +882,7 @@ const AI_NAMES = ['Schattenkabinett', 'Lobby-Verband', 'Hinterbänkler-Front', '
 
 function aiDifficulty(stage) { return Math.min(1.6, 1.0 + 0.04 * (stage - 1)); }
 
-function makeAiArmy(stage, seed, playerPower) {
+function makeAiArmy(stage, seed, playerPower, multOverride) {
   const rng = mulberry32(seed ^ 0xa11ce);
   const size = 5;
   const weights = { C: Math.max(0.1, 0.6 - stage * 0.05), R: 0.3, E: Math.min(0.45, 0.1 + stage * 0.035), L: Math.min(0.3, Math.max(0.02, (stage - 2) * 0.025)) };
@@ -909,7 +909,7 @@ function makeAiArmy(stage, seed, playerPower) {
 
   // An Spielerstärke anpassen
   if (playerPower) {
-    const target = playerPower * aiDifficulty(stage);
+    const target = playerPower * (multOverride || aiDifficulty(stage));
     const rk = (id) => RARITY_ORDER.indexOf(POL_BY_ID[id].rarity);
     for (let it = 0; it < 60; it++) {
       const pw = alliancePower(chosen, levels);
