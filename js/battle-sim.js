@@ -171,10 +171,11 @@ class Battle {
         atk: C.atk * (0.55 + p.atk / 100) * lv * s.atk,
         hp: C.hp * (0.55 + p.def / 100) * lv * s.hp,
         speed: C.speed * (0.85 + p.tac / 400) * s.spd,
-        abilityCd: C.abilityCd * (1.25 - p.tac / 200) * s.cd,
+        abilityCd: C.abilityCd * (1.25 - p.tac / 200) * Math.max(0.35, s.cd),
+        leaderMul: s.leader || 1, regen: s.regen || 0,
         abilityLeft: 0, shieldT: 0, blitzT: 0,
         manual: this.control[team] === 'player',
-        leaderGone: false, leaderId: 0, units: [], startCount: C.count,
+        leaderGone: false, leaderId: 0, units: [], startCount: C.count + (s.units || 0),
         objective: null, objTimer: 0, laneY: 0, order: null,
         dmg: 0, kills: 0, heal: 0, spawned: 0, abilities: 0,
       };
@@ -182,7 +183,7 @@ class Battle {
       const c = deployToWorld(this.map, team, m.pos);
       bat.laneY = c.y;
       this.bats.push(bat);
-      for (let i = 0; i < C.count; i++) {
+      for (let i = 0; i < bat.startCount; i++) {
         const leader = i === 0;
         const ring = leader ? 0 : 1 + Math.floor((i - 1) / 6);
         const k = (i - 1) % 6;
@@ -196,7 +197,7 @@ class Battle {
   addBatUnit(bat, x, y, leader) {
     const C = CLASSES[bat.cls];
     const u = this.addUnit({
-      team: bat.team, bat: bat.idx, cls: bat.cls, x, y, hp: bat.hp * (leader ? 2.5 : 1), atk: bat.atk * (leader ? 1.3 : 1),
+      team: bat.team, bat: bat.idx, cls: bat.cls, x, y, hp: bat.hp * (leader ? 2.5 * bat.leaderMul : 1), atk: bat.atk * (leader ? 1.3 * bat.leaderMul : 1),
       range: C.range, speed: bat.speed, cd: C.cd, r: C.r + (leader ? 4 : 0), leader, splash: C.splash || 0,
     });
     u.cdLeft = this.rng() * C.cd;
@@ -587,6 +588,15 @@ class Battle {
       }
     }
 
+    // Regeneration (Fraktionsbonus Grüne)
+    if (this.tick % 10 === 0) {
+      for (const u of this.units) {
+        if (!u.alive || u.cls === 'hq') continue;
+        const bat = this.bats[u.bat];
+        if (bat.regen > 0 && this.time - u.hitT > 2) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * bat.regen * 0.5);
+      }
+    }
+
     // Nachschub (Feldzug)
     if (this.cfg.supply && this.tick % 10 === 0) {
       for (const u of this.units) {
@@ -882,14 +892,14 @@ const AI_NAMES = ['Schattenkabinett', 'Lobby-Verband', 'Hinterbänkler-Front', '
 
 function aiDifficulty(stage) { return Math.min(1.6, 1.0 + 0.04 * (stage - 1)); }
 
-function makeAiArmy(stage, seed, playerPower, multOverride) {
+function makeAiArmy(stage, seed, playerPower, multOverride, forceTheme) {
   const rng = mulberry32(seed ^ 0xa11ce);
   const size = 5;
   const weights = { C: Math.max(0.1, 0.6 - stage * 0.05), R: 0.3, E: Math.min(0.45, 0.1 + stage * 0.035), L: Math.min(0.3, Math.max(0.02, (stage - 2) * 0.025)) };
   // Thema für Synergien
   const roll = rng();
   const regionKeys = Object.keys(REGIONS), eraKeys = Object.keys(ERAS);
-  const theme = roll < 0.4 ? { region: regionKeys[Math.floor(rng() * regionKeys.length)] } : roll < 0.7 ? { era: eraKeys[Math.floor(rng() * eraKeys.length)] } : null;
+  const theme = forceTheme ? forceTheme : roll < 0.4 ? { region: regionKeys[Math.floor(rng() * regionKeys.length)] } : roll < 0.7 ? { era: eraKeys[Math.floor(rng() * eraKeys.length)] } : null;
   const inTheme = (p) => !theme || (theme.region ? p.region === theme.region : p.era === theme.era);
   const classOk = (p, chosen) => chosen.filter((c) => POL_BY_ID[c].cls === p.cls).length < 2;
   const chosen = [];
@@ -900,7 +910,9 @@ function makeAiArmy(stage, seed, playerPower, multOverride) {
     for (const k of ['C', 'R', 'E', 'L']) { if (r < weights[k]) { rar = k; break; } r -= weights[k]; }
     let pool = POLITICIANS.filter((p) => p.rarity === rar && !chosen.includes(p.id) && classOk(p, chosen));
     const themed = pool.filter(inTheme);
-    if (themed.length && rng() < 0.75) pool = themed;
+    const local = forceTheme && forceTheme.flags ? pool.filter((p) => forceTheme.flags.includes(p.flag)) : [];
+    if (local.length && rng() < 0.7) pool = local;
+    else if (themed.length && rng() < (forceTheme ? 0.92 : 0.75)) pool = themed;
     if (pool.length) chosen.push(pool[Math.floor(rng() * pool.length)].id);
   }
   const levels = {};
@@ -918,7 +930,8 @@ function makeAiArmy(stage, seed, playerPower, multOverride) {
         if (low && rng() < 0.6) { levels[low]++; continue; }
         // schwächste Karte gegen eine seltenere tauschen
         const weakest = chosen.slice().sort((a, b) => rk(a) - rk(b) || levels[a] - levels[b])[0];
-        const better = POLITICIANS.filter((p) => rk(p.id) > rk(weakest) && !chosen.includes(p.id) && classOk(p, chosen.filter((c) => c !== weakest)));
+        let better = POLITICIANS.filter((p) => rk(p.id) > rk(weakest) && !chosen.includes(p.id) && classOk(p, chosen.filter((c) => c !== weakest)));
+        if (forceTheme && better.some(inTheme)) better = better.filter(inTheme);
         if (better.length) {
           const nb = better[Math.floor(rng() * better.length)].id;
           chosen[chosen.indexOf(weakest)] = nb; levels[nb] = levels[weakest]; delete levels[weakest];
@@ -928,7 +941,8 @@ function makeAiArmy(stage, seed, playerPower, multOverride) {
         const high = chosen.filter((id) => levels[id] > 1).sort((a, b) => levels[b] - levels[a])[0];
         if (high) { levels[high]--; continue; }
         const strongest = chosen.slice().sort((a, b) => rk(b) - rk(a))[0];
-        const weaker = POLITICIANS.filter((p) => rk(p.id) < rk(strongest) && !chosen.includes(p.id) && classOk(p, chosen.filter((c) => c !== strongest)));
+        let weaker = POLITICIANS.filter((p) => rk(p.id) < rk(strongest) && !chosen.includes(p.id) && classOk(p, chosen.filter((c) => c !== strongest)));
+        if (forceTheme && weaker.some(inTheme)) weaker = weaker.filter(inTheme);
         if (!weaker.length) break;
         const nw = weaker[Math.floor(rng() * weaker.length)].id;
         chosen[chosen.indexOf(strongest)] = nw; levels[nw] = 1; delete levels[strongest];

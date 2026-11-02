@@ -198,6 +198,16 @@ const PARTY_GROUPS = {
   KRO: 'caesar napoleon bismarck kleopatra alexander elisabeth1 katharina friedrich2 mariatheresia augustus perikles richelieu cicero solon metternich talleyrand ashoka hammurapi qinshihuang medici saladin karl hatschepsut selassie',
   SON: 'gorbatschow monnet annan hammarskjoeld vargas',
 };
+/* Fraktionsboni: ab 2 Mitgliedern derselben Parteienfamilie (Stufen 2/3/4/5 → 6/12/20/30 %) */
+const PARTY_BONUS = {
+  KON: { name: 'Stabilität', desc: 'mehr Rückhalt (HP)', apply: (s, b) => (s.hp += b * 1.2), text: (b) => `+${Math.round(b * 120)} % Rückhalt` },
+  SOZ: { name: 'Solidarität', desc: 'zusätzliche Einheiten pro Bataillon', apply: (s, b, n) => (s.units += n >= 4 ? 2 : 1), text: (b, n) => `+${n >= 4 ? 2 : 1} Einheit${n >= 4 ? 'en' : ''} pro Bataillon` },
+  LIB: { name: 'Freier Markt', desc: 'mehr Tempo und etwas Angriff', apply: (s, b) => { s.spd += b * 1.2; s.atk += b * 0.4; }, text: (b) => `+${Math.round(b * 120)} % Tempo, +${Math.round(b * 40)} % Angriff` },
+  GRU: { name: 'Nachhaltigkeit', desc: 'Truppen regenerieren Lebenspunkte', apply: (s, b) => (s.regen += b * 0.15), text: (b) => `Regeneration ${(b * 15).toFixed(1)} % LP pro Sekunde` },
+  UNA: { name: 'Widerstand', desc: 'mehr Angriff', apply: (s, b) => (s.atk += b * 1.1), text: (b) => `+${Math.round(b * 110)} % Angriff` },
+  KRO: { name: 'Hofstaat', desc: 'deutlich stärkere Anführer', apply: (s, b) => { s.leader += b * 3; s.cd -= b * 0.5; }, text: (b) => `Anführer +${Math.round(b * 300)} % stärker, ${Math.round(b * 50)} % schnellere Fähigkeiten` },
+  SON: { name: 'Diplomatie', desc: 'schnellere Fähigkeiten', apply: (s, b) => (s.cd -= b * 1.3), text: (b) => `${Math.round(b * 130)} % schnellere Fähigkeiten` },
+};
 const PARTY_BY_ID = {};
 for (const [k, ids] of Object.entries(PARTY_GROUPS)) ids.split(' ').forEach((id) => (PARTY_BY_ID[id] = k));
 
@@ -232,7 +242,7 @@ const SYNERGY_TIERS = { 2: 0.06, 3: 0.12, 4: 0.2, 5: 0.3 };
 function computeSynergies(ids) {
   const pols = ids.map((id) => POL_BY_ID[id]).filter(Boolean);
   const per = {};
-  pols.forEach((p) => (per[p.id] = { hp: 1, atk: 1, spd: 1, cd: 1 }));
+  pols.forEach((p) => (per[p.id] = { hp: 1, atk: 1, spd: 1, cd: 1, units: 0, regen: 0, leader: 1 }));
   const list = [];
   const group = (keyFn) => {
     const m = {};
@@ -255,13 +265,15 @@ function computeSynergies(ids) {
       list.push({ icon: '⏳', name: `Zeitgenossen: ${ERAS[k].short}`, count: ps.length, text: `+${Math.round(b * 100)} % Angriff`, ids: ps.map((p) => p.id) });
     }
   }
-  // Partei -> Fraktionsdisziplin (schnellere Fähigkeiten)
+  // Partei -> eigener Fraktionsbonus je Parteienfamilie
   for (const [k, ps] of Object.entries(group((p) => p.party))) {
-    const b = SYNERGY_TIERS[Math.min(ps.length, 5)];
-    if (b) {
-      ps.forEach((p) => (per[p.id].cd -= b));
-      list.push({ icon: PARTIES[k].icon, name: `Fraktion: ${PARTIES[k].short}`, count: ps.length, text: `${Math.round(b * 100)} % schnellere Fähigkeiten`, ids: ps.map((p) => p.id) });
-    }
+    const n = Math.min(ps.length, 5);
+    const b = SYNERGY_TIERS[n];
+    if (!b) continue;
+    const PB = PARTY_BONUS[k];
+    ps.forEach((p) => PB.apply(per[p.id], b, n));
+    if (n >= 5) ps.forEach((p) => { per[p.id].atk += 0.05; per[p.id].hp += 0.05; });
+    list.push({ icon: PARTIES[k].icon, name: `${PARTIES[k].short}: ${PB.name}`, count: ps.length, text: PB.text(b, n) + (n >= 5 ? ' · Absolute Mehrheit: +5 % Angriff & Rückhalt' : ''), ids: ps.map((p) => p.id), party: k });
   }
   // Klassenvielfalt -> Tempo & Fähigkeiten
   const classes = new Set(pols.map((p) => p.cls));

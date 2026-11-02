@@ -35,6 +35,7 @@ const MISSION_POOL = [
   { id: 'capture8', ev: 'capture', goal: 8, reward: 110, text: 'Erobere 8 Städte' },
   { id: 'resign10', ev: 'kills', goal: 60, reward: 100, text: 'Besiege 60 feindliche Einheiten' },
   { id: 'ability8', ev: 'ability', goal: 8, reward: 90, text: 'Löse 8 Fähigkeiten aus' },
+  { id: 'conquer1', ev: 'conquer', goal: 1, reward: 150, text: 'Erobere ein Gebiet auf der Weltkarte' },
 ];
 const ALL_MISSIONS_BONUS = 150;
 const FIRST_WIN_BONUS = 100;
@@ -101,6 +102,9 @@ for (const [k, R] of Object.entries(REGIONS)) {
 [[5, 250], [10, 600], [20, 1500]].forEach(([n, r]) =>
   ACHIEVEMENTS.push({ id: 'lvl' + n, icon: '🎓', name: `Karriere: ${rankName(n)}`, text: `Erreiche Spieler-Level ${n}`, reward: r, goal: n, value: () => S.level || 1 }));
 
+[[5, 300], [15, 800], [33, 3000]].forEach(([n, r]) =>
+  ACHIEVEMENTS.push({ id: 'world' + n, icon: '🌍', name: n === 33 ? 'Weltherrschaft' : `Expansion (${n} Gebiete)`, text: `Besitze ${n} Gebiete auf der Weltkarte`, reward: r, goal: n, value: () => (S.world ? Object.keys(S.world.owned).length : 0) }));
+
 function claimAchievement(id) {
   const a = ACHIEVEMENTS.find((x) => x.id === id);
   if (!a || S.achievements[id] || a.value() < a.goal) return;
@@ -155,6 +159,7 @@ function claimableCount() {
   n += ACHIEVEMENTS.filter((a) => !S.achievements[a.id] && a.value() >= a.goal).length;
   if (salaryPending() >= salaryRate()) n++;
   if (dailyAvailable()) n++;
+  if (typeof tributeRate === 'function' && S.world && S.world.start && tributeRate() && tributePending() >= tributeRate()) n++;
   return n;
 }
 function updateEarnBadge() {
