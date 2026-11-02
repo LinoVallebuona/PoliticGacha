@@ -21,7 +21,8 @@ function defaultState() {
     alliances: [],
     activeAlliance: null,
     pity: 0,
-    stage: 1,
+    stages: { classic: 1, grand: 1, command: 1 },
+    battleMode: 'classic',
     lastDaily: '',
     stats: { pulls: 0, wins: 0, losses: 0, draws: 0, pvpWins: 0, pvpLosses: 0 },
     starterGiven: false,
@@ -33,7 +34,12 @@ let S = defaultState();
 function loadState() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) S = Object.assign(defaultState(), JSON.parse(raw));
+    if (raw) {
+      const saved = JSON.parse(raw);
+      S = Object.assign(defaultState(), saved);
+      if (!saved.stages) S.stages = { classic: saved.stage || 1, grand: 1, command: 1 };
+      delete S.stage;
+    }
   } catch { S = defaultState(); }
 }
 function saveState() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch {} }
@@ -163,14 +169,18 @@ function allianceToArmy(a) {
   });
 }
 
+/* Kampfstärke einer Allianz – bildet die Simulation nach (Angriff × Rückhalt, Level, Synergien) */
+function memberStrength(p, lvl, s) {
+  const lv = 1 + LEVEL_BONUS * (lvl - 1);
+  const a = (0.55 + p.atk / 100) * lv * s.atk, d = (0.55 + p.def / 100) * lv * s.hp;
+  return 100 * Math.sqrt(a * d) * (0.92 + 0.08 * s.spd) * (0.9 + p.tac / 500);
+}
 function alliancePower(ids, levels) {
   const syn = computeSynergies(ids);
   let total = 0;
   ids.forEach((id) => {
     const p = POL_BY_ID[id]; if (!p) return;
-    const s = syn.per[id];
-    const lvl = levels ? levels[id] : levelOf(id);
-    total += cardPower(p, lvl) * ((s.hp + s.atk + s.spd) / 3);
+    total += memberStrength(p, levels ? levels[id] : levelOf(id), syn.per[id]);
   });
   return Math.round(total);
 }
